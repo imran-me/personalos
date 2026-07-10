@@ -106,4 +106,24 @@
 #acadCanvas .acv-col.on { background: var(--primary); border-color: var(--primary); color: #fff; }
 #acadCanvas .acv-actions { margin-left: auto; display: flex; gap: 8px; }
 
+/* ---- semester filter pills + history ---- */
+.acad-semfilter { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 13px; }
+.acad-sempill { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 5px 13px; font: 600 12px var(--font-ui); color: var(--text-soft); cursor: pointer; transition: .15s; }
+.acad-sempill:hover { border-color: var(--primary); color: var(--primary); }
+.acad-sempill.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.acad-semrow { border: 1px solid var(--line); border-radius: 13px; padding: 12px 15px; margin-bottom: 10px; cursor: pointer; transition: border-color .15s, transform .15s; background: var(--surface); }
+.acad-semrow:hover { border-color: var(--primary); transform: translateX(2px); }
+.acad-semrow.now { border-left: 3px solid var(--primary); background: var(--primary-soft); }
+.acad-semhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.acad-semhead b { font: 700 13.5px var(--font-display); color: #16203a; }
+.acad-semnow { font: 700 9.5px var(--font-ui); text-transform: uppercase; letter-spacing: .05em; background: var(--primary); color: #fff; border-radius: 999px; padding: 2px 8px; }
+.acad-semmeta { color: var(--text-soft); font-size: 11.5px; }
+.acad-semgpa { margin-left: auto; font: 700 12.5px var(--font-mono); border-radius: 8px; padding: 3px 10px; }
+.acad-semgpa.g { background: var(--green-soft); color: var(--green); }
+.acad-semgpa.a { background: var(--amber-soft); color: var(--amber); }
+.acad-semgpa.r { background: var(--red-soft); color: var(--red); }
+.acad-semcourses { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+.acad-semcourse { font: 600 11px var(--font-mono); border: 1px solid var(--line-2); background: var(--surface-2); border-radius: 8px; padding: 3px 9px; color: var(--text-soft); }
+.acad-semcourse b { color: var(--green); margin-left: 2px; }
+
 @media (max-width: 900px) { .acad-week { grid-template-columns: repeat(2, 1fr); } .acad-day { min-height: 0; } }

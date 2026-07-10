@@ -60,6 +60,7 @@
             <button class="btn btn-primary btn-sm owner-only" id="acadCourseAdd"><i class="bi bi-plus-lg me-1"></i>Add course</button>
           </div>
         </div>
+        <div id="acadSemFilter" class="acad-semfilter"></div>
         <div id="acadCourses" class="acad-courses"></div>
       </div>
 
@@ -81,6 +82,21 @@
           <button class="btn btn-primary btn-sm owner-only" id="acadAsgAdd"><i class="bi bi-plus-lg me-1"></i>Add assignment</button>
         </div>
         <div id="acadBoard" class="kanban acad-board"></div>
+      </div>
+
+      <!-- Semester history — every past semester at a glance (SGPA, credits, grades) -->
+      <div class="card card-pad mb-4">
+        <div class="d-flex align-items-center mb-3">
+          <div class="section-title mb-0"><i class="bi bi-collection me-1"></i>Semester history</div>
+          <span class="ms-auto text-faint" style="font-size:11.5px">Click a semester to filter the courses above</span>
+        </div>
+        <div id="acadSemHistory"></div>
+      </div>
+
+      <!-- Starter data (always visible for now) -->
+      <div class="text-center mb-4" id="acadStarterFoot">
+        <button class="btn btn-soft btn-sm" id="acadStarterBottom"><i class="bi bi-magic me-1"></i>Load starter data (my DIU CIS info + full sample semesters)</button>
+        <div class="text-faint mt-1" style="font-size:11px">Adds demo records on top of whatever exists — everything stays editable &amp; deletable. Owner sign-in required to save.</div>
       </div>
 
     </div>

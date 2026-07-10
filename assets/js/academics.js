@@ -264,17 +264,68 @@ function acadRenderSchedule() {
     </div>`).join('');
 }
 
+/* which semester the Courses grid shows ('All' | 'current' | a semester value) */
+let acadSemView = 'current';
+
+function acadSemesterOf(c) { return String(c.semester || '').trim() || '—'; }
+function acadSgpa(list) {
+  const graded = list.filter(c => c.gradePoint != null && c.gradePoint !== '' && Number(c.credit));
+  const cr = graded.reduce((s, c) => s + Number(c.credit), 0);
+  if (!cr) return null;
+  return graded.reduce((s, c) => s + Number(c.gradePoint) * Number(c.credit), 0) / cr;
+}
+
+function acadRenderSemFilter() {
+  const host = document.getElementById('acadSemFilter'); if (!host) return;
+  const courses = DB.getAll('courses');
+  const sems = [...new Set(courses.map(acadSemesterOf).filter(s => s !== '—'))].sort((a, b) => Number(b) - Number(a));
+  if (!sems.length) { host.innerHTML = ''; return; }
+  const pill = (val, label, on) => `<button class="acad-sempill ${on ? 'on' : ''}" data-sem="${escapeHtml(val)}">${escapeHtml(label)}</button>`;
+  host.innerHTML = pill('current', 'Current', acadSemView === 'current') + pill('All', 'All semesters', acadSemView === 'All')
+    + sems.map(s => pill(s, 'Sem ' + s, acadSemView === s)).join('');
+  host.querySelectorAll('.acad-sempill').forEach(b => b.onclick = () => { acadSemView = b.dataset.sem; acadRenderSemFilter(); acadRenderCourses(); });
+}
+
+function acadRenderSemHistory() {
+  const host = document.getElementById('acadSemHistory'); if (!host) return;
+  const courses = DB.getAll('courses');
+  const bySem = {};
+  courses.forEach(c => { const s = acadSemesterOf(c); if (s !== '—') (bySem[s] = bySem[s] || []).push(c); });
+  const sems = Object.keys(bySem).sort((a, b) => Number(b) - Number(a));
+  if (!sems.length) { host.innerHTML = `<p class="text-soft mb-0" style="font-size:13px">Semesters appear here once your courses carry a semester number.</p>`; return; }
+  // running CGPA up to each semester (for the trend line)
+  host.innerHTML = sems.map(s => {
+    const list = bySem[s];
+    const ongoing = list.some(c => (c.status || 'Ongoing') === 'Ongoing' || c.status === 'Retaking');
+    const sgpa = acadSgpa(list);
+    const credits = list.reduce((x, c) => x + (Number(c.credit) || 0), 0);
+    return `<div class="acad-semrow ${ongoing ? 'now' : ''}" data-sem="${escapeHtml(s)}">
+      <div class="acad-semhead">
+        <b>Semester ${escapeHtml(s)}</b>
+        ${ongoing ? '<span class="acad-semnow">current</span>' : ''}
+        <span class="acad-semmeta">${list.length} course${list.length > 1 ? 's' : ''} · ${credits} cr</span>
+        <span class="acad-semgpa ${sgpa != null ? (sgpa >= 3.5 ? 'g' : sgpa >= 3 ? 'a' : 'r') : ''}">${sgpa != null ? 'SGPA ' + sgpa.toFixed(2) : (ongoing ? 'in progress' : '—')}</span>
+      </div>
+      <div class="acad-semcourses">${list.map(c => `<span class="acad-semcourse" title="${escapeHtml(c.title || '')}">${escapeHtml(c.code || c.title)}${c.finalGrade ? ` <b>${escapeHtml(c.finalGrade)}</b>` : ongoing ? '' : ''}</span>`).join('')}</div>
+    </div>`;
+  }).join('');
+  host.querySelectorAll('.acad-semrow').forEach(row => row.onclick = () => {
+    acadSemView = row.dataset.sem;
+    acadRenderSemFilter(); acadRenderCourses();
+    document.getElementById('acadCourses')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
 function acadRenderCourses() {
   const host = document.getElementById('acadCourses'); if (!host) return;
-  const courses = DB.getAll('courses');
+  let courses = DB.getAll('courses');
   if (!courses.length) {
-    host.innerHTML = `<div style="text-align:center;padding:18px 10px">
-      <p class="text-soft mb-2" style="font-size:13px">No courses yet — add your first course, or load a ready starter pack<br>(your DIU CIS info + real faculty + sample courses, attendance, tests &amp; assignments — everything editable).</p>
-      <button class="btn btn-primary btn-sm owner-only" id="acadStarterBtn"><i class="bi bi-magic me-1"></i>Load my starter data</button>
-    </div>`;
-    const sb = document.getElementById('acadStarterBtn'); if (sb) sb.onclick = acadLoadStarter;
+    host.innerHTML = `<p class="text-soft mb-0" style="font-size:13px;text-align:center;padding:10px">No courses yet — add your first course, or use <b>Load starter data</b> at the bottom of this page.</p>`;
     return;
   }
+  if (acadSemView === 'current') courses = courses.filter(c => (c.status || 'Ongoing') === 'Ongoing' || c.status === 'Retaking');
+  else if (acadSemView !== 'All') courses = courses.filter(c => acadSemesterOf(c) === acadSemView);
+  if (!courses.length) { host.innerHTML = `<p class="text-soft mb-0" style="font-size:13px">Nothing in this view.</p>`; return; }
   const ordered = [...courses].sort((a, b) => (a.status === 'Ongoing' ? -1 : 1) - (b.status === 'Ongoing' ? -1 : 1) || String(a.code).localeCompare(String(b.code)));
   host.innerHTML = ordered.map(c => {
     const label = courseLabel(c);
@@ -558,7 +609,7 @@ function acadStarterData() {
   addAtt(OOP, [-24, -22, -17, -15, -10, -8, -3, -1], ['Present', 'Present', 'Present', 'Present', 'Present', 'Present', 'Absent', 'Absent']);
   addAtt(WEB, [-19, -12, -5], []);
   return {
-    programme: [{ degree: 'B.Sc. in Computing and Information System (CIS)', department: 'Computing and Information System (CIS)', institution: 'Daffodil International University', batch: '232', section: 'A', rollId: '232-16-53', currentSemester: 9, totalSemesters: 12, creditsCompleted: 98, totalCredits: 140, cgpa: 3.42, cgpaTarget: 3.75, advisor: 'Md. Sarwar Hossain Mollah', startDate: '2023-05-02', expectedGraduation: '2027-04-30' }],
+    programme: [{ degree: 'B.Sc. in Computing and Information System (CIS)', department: 'Computing and Information System (CIS)', institution: 'Daffodil International University', batch: '232', section: 'A', rollId: '232-16-53', currentSemester: 4, totalSemesters: 12, creditsCompleted: 43, totalCredits: 140, cgpa: 3.75, cgpaTarget: 3.85, advisor: 'Md. Sarwar Hossain Mollah', startDate: '2023-05-02', expectedGraduation: '2027-04-30' }],
     faculty: [
       { name: 'Md. Sarwar Hossain Mollah', designation: 'Associate Professor', department: 'CIS', courses: 'Head of the Department', officeHours: 'Sun & Tue 14:00-16:00', preferredContact: 'Email' },
       { name: 'Mohammad Azam Khan', designation: 'Associate Professor', department: 'CIS', courses: 'CIS 344', preferredContact: 'Email' },
@@ -570,13 +621,30 @@ function acadStarterData() {
       { name: 'Tamanna Akter', designation: 'Lecturer', department: 'CIS', preferredContact: 'Email' },
     ],
     courses: [
-      { code: 'CIS 331', title: 'System Analysis & Design', credit: 3, semester: '9', teacher: 'Md. Biplob Hossain', section: 'A', room: 'AB4-503', classDays: 'Sun 10:00-11:30; Tue 10:00-11:30', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 24, courseType: 'Theory', difficulty: 'Moderate', color: 'Indigo', syllabusTopics: ['requirements analysis', 'dfd', 'use case', 'uml', 'feasibility study'] },
-      { code: 'CIS 344', title: 'Database Management Systems', credit: 3, semester: '9', teacher: 'Mohammad Azam Khan', section: 'A', room: 'AB4-402', classDays: 'Mon 11:40-13:10; Wed 11:40-13:10', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 24, courseType: 'Theory', difficulty: 'Moderate', color: 'Green', syllabusTopics: ['er model', 'sql', 'normalization', 'transactions', 'indexing'] },
-      { code: 'CIS 352', title: 'Object Oriented Programming (Java)', credit: 3, semester: '9', teacher: 'Md. Mehedi Hassan', section: 'A', room: 'AB4-401', classDays: 'Sun 14:00-15:30; Tue 14:00-15:30', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 24, courseType: 'Theory + Lab', difficulty: 'Hard', color: 'Red', syllabusTopics: ['classes and objects', 'inheritance', 'polymorphism', 'interfaces', 'exception handling'] },
-      { code: 'CIS 361', title: 'Management Information Systems', credit: 3, semester: '9', teacher: 'Sonia Nasrin', section: 'A', room: 'AB4-505', classDays: 'Mon 08:30-10:00; Wed 08:30-10:00', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 24, courseType: 'Theory', difficulty: 'Easy', color: 'Sky', syllabusTopics: ['decision support systems', 'erp', 'business processes', 'it strategy'] },
-      { code: 'CIS 355', title: 'Web Technologies Lab', credit: 1.5, semester: '9', teacher: 'Md. Faruk Hosen', section: 'A', room: 'Lab-3', classDays: 'Thu 14:00-16:00 (Lab-3)', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 12, courseType: 'Lab', difficulty: 'Moderate', color: 'Violet', syllabusTopics: ['html css', 'javascript', 'php basics', 'rest apis'] },
-      { code: 'CIS 221', title: 'Structured Programming', credit: 3, semester: '5', teacher: 'Md. Nasimul Kader', status: 'Completed', finalGrade: 'C+', gradePoint: 2.5, courseType: 'Theory', difficulty: 'Hard', color: 'Amber', syllabusTopics: ['loops', 'functions', 'arrays', 'pointers', 'recursion'] },
-      { code: 'CIS 111', title: 'Fundamentals of Computing', credit: 3, semester: '1', status: 'Completed', finalGrade: 'A-', gradePoint: 3.5, courseType: 'Theory', color: 'Slate' },
+      // ── Semester 4 (current) ──
+      { code: 'CIS 331', title: 'System Analysis & Design', credit: 3, semester: '4', teacher: 'Md. Biplob Hossain', section: 'A', room: 'AB4-503', classDays: 'Sun 10:00-11:30; Tue 10:00-11:30', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 24, courseType: 'Theory', difficulty: 'Moderate', color: 'Indigo', syllabusTopics: ['requirements analysis', 'dfd', 'use case', 'uml', 'feasibility study'] },
+      { code: 'CIS 344', title: 'Database Management Systems', credit: 3, semester: '4', teacher: 'Mohammad Azam Khan', section: 'A', room: 'AB4-402', classDays: 'Mon 11:40-13:10; Wed 11:40-13:10', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 24, courseType: 'Theory', difficulty: 'Moderate', color: 'Green', syllabusTopics: ['er model', 'sql', 'normalization', 'transactions', 'indexing'] },
+      { code: 'CIS 352', title: 'Object Oriented Programming (Java)', credit: 3, semester: '4', teacher: 'Md. Mehedi Hassan', section: 'A', room: 'AB4-401', classDays: 'Sun 14:00-15:30; Tue 14:00-15:30', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 24, courseType: 'Theory + Lab', difficulty: 'Hard', color: 'Red', syllabusTopics: ['classes and objects', 'inheritance', 'polymorphism', 'interfaces', 'exception handling'] },
+      { code: 'CIS 361', title: 'Management Information Systems', credit: 3, semester: '4', teacher: 'Sonia Nasrin', section: 'A', room: 'AB4-505', classDays: 'Mon 08:30-10:00; Wed 08:30-10:00', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 24, courseType: 'Theory', difficulty: 'Easy', color: 'Sky', syllabusTopics: ['decision support systems', 'erp', 'business processes', 'it strategy'] },
+      { code: 'CIS 355', title: 'Web Technologies Lab', credit: 1.5, semester: '4', teacher: 'Md. Faruk Hosen', section: 'A', room: 'Lab-3', classDays: 'Thu 14:00-16:00 (Lab-3)', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 12, courseType: 'Lab', difficulty: 'Moderate', color: 'Violet', syllabusTopics: ['html css', 'javascript', 'php basics', 'rest apis'] },
+      // ── Semester 3 (completed) — incl. the weak C+ EON should coach ──
+      { code: 'CIS 221', title: 'Structured Programming', credit: 3, semester: '3', teacher: 'Md. Nasimul Kader', status: 'Completed', finalGrade: 'C+', gradePoint: 2.5, courseType: 'Theory', difficulty: 'Hard', color: 'Amber', syllabusTopics: ['loops', 'functions', 'arrays', 'pointers', 'recursion'] },
+      { code: 'CIS 211', title: 'Digital Logic Design', credit: 3, semester: '3', teacher: 'Md. Mehedi Hassan', status: 'Completed', finalGrade: 'A+', gradePoint: 4.0, courseType: 'Theory + Lab', difficulty: 'Moderate', color: 'Green', syllabusTopics: ['boolean algebra', 'k-map', 'combinational circuits', 'flip flops'] },
+      { code: 'STA 201', title: 'Statistics for Computing', credit: 3, semester: '3', status: 'Completed', finalGrade: 'A', gradePoint: 3.75, courseType: 'Theory', color: 'Sky', syllabusTopics: ['probability', 'distributions', 'hypothesis testing'] },
+      { code: 'CIS 213', title: 'Data Communication', credit: 3, semester: '3', status: 'Completed', finalGrade: 'A', gradePoint: 3.75, courseType: 'Theory', color: 'Indigo', syllabusTopics: ['osi model', 'transmission media', 'switching'] },
+      { code: 'MGT 201', title: 'Principles of Management', credit: 3, semester: '3', status: 'Completed', finalGrade: 'A+', gradePoint: 4.0, courseType: 'Theory', color: 'Slate' },
+      // ── Semester 2 (completed) ──
+      { code: 'CIS 121', title: 'Programming Fundamentals', credit: 3, semester: '2', teacher: 'Md. Nasimul Kader', status: 'Completed', finalGrade: 'A', gradePoint: 3.75, courseType: 'Theory + Lab', color: 'Indigo', syllabusTopics: ['variables', 'conditionals', 'loops', 'functions'] },
+      { code: 'CIS 122', title: 'Discrete Mathematics', credit: 3, semester: '2', status: 'Completed', finalGrade: 'A+', gradePoint: 4.0, courseType: 'Theory', color: 'Violet', syllabusTopics: ['logic', 'sets', 'graphs', 'combinatorics'] },
+      { code: 'MAT 102', title: 'Mathematics II (Calculus)', credit: 3, semester: '2', status: 'Completed', finalGrade: 'A-', gradePoint: 3.5, courseType: 'Theory', color: 'Green' },
+      { code: 'ACC 101', title: 'Principles of Accounting', credit: 3, semester: '2', status: 'Completed', finalGrade: 'A+', gradePoint: 4.0, courseType: 'Theory', color: 'Amber' },
+      { code: 'ART 101', title: 'Art of Living', credit: 2, semester: '2', status: 'Completed', finalGrade: 'A', gradePoint: 3.75, courseType: 'Theory', color: 'Sky' },
+      // ── Semester 1 (completed) ──
+      { code: 'CIS 111', title: 'Fundamentals of Computing', credit: 3, semester: '1', status: 'Completed', finalGrade: 'A+', gradePoint: 4.0, courseType: 'Theory', color: 'Indigo' },
+      { code: 'ENG 101', title: 'Basic Functional English', credit: 3, semester: '1', status: 'Completed', finalGrade: 'A', gradePoint: 3.75, courseType: 'Theory', color: 'Sky' },
+      { code: 'MAT 101', title: 'Mathematics I', credit: 3, semester: '1', status: 'Completed', finalGrade: 'A-', gradePoint: 3.5, courseType: 'Theory', color: 'Green' },
+      { code: 'PHY 101', title: 'Physics', credit: 3, semester: '1', status: 'Completed', finalGrade: 'A', gradePoint: 3.75, courseType: 'Theory', color: 'Violet' },
+      { code: 'BDS 101', title: 'Bangladesh Studies', credit: 2, semester: '1', status: 'Completed', finalGrade: 'A+', gradePoint: 4.0, courseType: 'Theory', color: 'Slate' },
     ],
     attendance: att,
     assessments: [
@@ -593,6 +661,15 @@ function acadStarterData() {
       { course: SAD, type: 'Quiz', title: 'Quiz 1 — DFD Levels', date: day(-10), topics: ['dfd'], weight: 5, totalMarks: 15, obtainedMarks: 11, classAverage: 10, status: 'Done' },
       { course: SAD, type: 'Quiz', title: 'Quiz 2 — Use Cases', date: day(1), time: '10:00', topics: ['use case'], weight: 5, totalMarks: 15, status: 'Upcoming' },
       { course: MIS, type: 'Presentation', title: 'Group Presentation — ERP Case', date: day(6), topics: ['erp'], weight: 10, totalMarks: 20, status: 'Upcoming' },
+      // ── Past semesters (history EON analyses across courses) ──
+      { course: 'CIS 221 — Structured Programming', type: 'Class Test', title: 'CT 1 — Loops & Arrays', date: day(-150), topics: ['loops', 'arrays'], weight: 10, totalMarks: 20, obtainedMarks: 11, classAverage: 13, preparedness: '3 — Okay', status: 'Done', difficultyFelt: '4 — Hard' },
+      { course: 'CIS 221 — Structured Programming', type: 'Midterm', title: 'Midterm — Functions & Pointers', date: day(-130), topics: ['functions', 'pointers'], weight: 25, totalMarks: 40, obtainedMarks: 19, classAverage: 24, preparedness: '2 — Barely', status: 'Done', difficultyFelt: '5 — Brutal', reviewNotes: 'Pointer arithmetic and pass-by-reference cost most marks.' },
+      { course: 'CIS 221 — Structured Programming', type: 'Final', title: 'Final — Full syllabus', date: day(-95), topics: ['pointers', 'recursion'], weight: 40, totalMarks: 60, obtainedMarks: 31, classAverage: 36, preparedness: '3 — Okay', status: 'Done' },
+      { course: 'CIS 211 — Digital Logic Design', type: 'Midterm', title: 'Midterm — Boolean & K-map', date: day(-128), topics: ['boolean algebra', 'k-map'], weight: 25, totalMarks: 40, obtainedMarks: 37, classAverage: 27, preparedness: '5 — Fully ready', status: 'Done' },
+      { course: 'CIS 211 — Digital Logic Design', type: 'Final', title: 'Final — Sequential circuits', date: day(-96), topics: ['flip flops', 'combinational circuits'], weight: 40, totalMarks: 60, obtainedMarks: 55, classAverage: 40, preparedness: '4 — Well prepared', status: 'Done' },
+      { course: 'STA 201 — Statistics for Computing', type: 'Final', title: 'Final — Inference', date: day(-94), topics: ['hypothesis testing', 'distributions'], weight: 40, totalMarks: 60, obtainedMarks: 51, classAverage: 38, preparedness: '4 — Well prepared', status: 'Done' },
+      { course: 'CIS 122 — Discrete Mathematics', type: 'Final', title: 'Final — Graphs & Combinatorics', date: day(-260), topics: ['graphs', 'combinatorics'], weight: 40, totalMarks: 60, obtainedMarks: 54, classAverage: 39, preparedness: '5 — Fully ready', status: 'Done' },
+      { course: 'CIS 121 — Programming Fundamentals', type: 'Final', title: 'Final — Loops & Functions', date: day(-262), topics: ['loops', 'functions'], weight: 40, totalMarks: 60, obtainedMarks: 47, classAverage: 37, preparedness: '4 — Well prepared', status: 'Done' },
     ],
     assignments: [
       { course: DBMS, title: 'Library Database Design Report', subtitle: 'ER diagram to normalized schema', assignedDate: day(-6), dueDate: day(4), weight: 10, totalMarks: 20, format: '8-10 pages', submissionMode: 'Email', priority: 'High', requirements: 'Cover page\nER diagram (Crow’s foot)\nNormalization to 3NF shown step by step\nSQL DDL script\nReferences', reqTicks: { 0: true, 1: true }, canvasContent: 'The library management system tracks members, books, loans and fines.\n\n**Entities**: Member, Book, Copy, Loan, Fine, Staff.\n\nThe ER model places Member and Copy in a many-to-many relation resolved by Loan...', status: 'In Progress' },
@@ -617,7 +694,7 @@ function acadLoadStarter() {
 if (typeof window !== 'undefined') window.AcademicsStarter = { load: acadLoadStarter };
 
 /* ---------- init + registration ---------- */
-function acadRedraw() { try { acadEnsure(); acadRenderStats(); acadRenderToday(); acadRenderSchedule(); acadRenderCourses(); acadRenderAssessments(); acadRenderBoard(); } catch (e) { console.warn('[academics] render failed:', e); } }
+function acadRedraw() { try { acadEnsure(); acadRenderStats(); acadRenderToday(); acadRenderSchedule(); acadRenderSemFilter(); acadRenderCourses(); acadRenderAssessments(); acadRenderBoard(); acadRenderSemHistory(); } catch (e) { console.warn('[academics] render failed:', e); } }
 
 function initAcademics() {
   acadEnsure();
@@ -635,6 +712,7 @@ function initAcademics() {
     const f = list[parseInt(pick, 10) - 1]; if (f) openEntityModal('faculty', f.id, acadRedraw);
   });
   wire('acadProgBtn', () => { const p = DB.getAll('programme')[0]; openEntityModal('programme', p ? p.id : null, acadRedraw); });
+  wire('acadStarterBottom', acadLoadStarter);   // always visible (write itself stays owner-gated)
   acadRedraw();
 }
 PAGE_INIT.academics = initAcademics;
