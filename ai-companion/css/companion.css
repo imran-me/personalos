@@ -1,0 +1,184 @@
+/* ============================================================
+   EON — companion.css
+   The full-viewport overlay that hosts EON. Pointer-events are
+   OFF on the layer so the ERP stays fully usable; only EON's own
+   hit-area and UI chips capture clicks.
+   ============================================================ */
+
+:root {
+  --eon-ocean:  #1f6dff;
+  --eon-blue:   #2f8bff;
+  --eon-cyan:   #28c7d8;
+  --eon-lime:   #7ed957;
+  --eon-navy:   #10225e;
+  --eon-violet: #7b54e0;
+  --eon-purple: #b08ff0;
+  --eon-white:  #eef4ff;
+  --eon-shadow: 0 10px 30px rgba(16, 24, 40, .18);
+  --eon-font: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+/* Root layer injected into <body>. Sits above the app, ignores pointer. */
+#eon-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;        /* above app chrome, below native dialogs */
+  pointer-events: none;
+  overflow: hidden;
+  font-family: var(--eon-font);
+}
+
+/* The Three.js canvas fills the layer. */
+#eon-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Marker that follows EON's head. Kept pointer-events:none so EON NEVER blocks
+   the app while roaming over content — clicks on him are detected by proximity
+   in event-tracker.js instead. */
+#eon-hit {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Soft contact shadow under EON (separate from the 3D scene for crispness). */
+#eon-floor-shadow {
+  position: absolute;
+  width: 70px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(16, 24, 40, .28), transparent 70%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: opacity .3s;
+}
+
+/* ---------------- Speech bubble ---------------- */
+.eon-bubble {
+  position: absolute;
+  max-width: 220px;
+  transform: translate(-50%, -100%);
+  background: #fff;
+  color: #16203a;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 1.5px solid var(--eon-ocean);
+  box-shadow: var(--eon-shadow);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .25s ease, transform .25s cubic-bezier(.2, .8, .3, 1);
+  white-space: normal;
+  z-index: 2;
+}
+.eon-bubble.show { opacity: 1; }
+.eon-bubble::after {           /* little tail */
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-right: 1.5px solid var(--eon-ocean);
+  border-bottom: 1.5px solid var(--eon-ocean);
+  transform: translateX(-50%) rotate(45deg);
+}
+.eon-bubble .eon-emoji { margin-right: 4px; }
+
+/* ---------------- Control chip (mute / settings) ---------------- */
+#eon-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+  z-index: 4;                 /* above the home backdrop */
+  align-items: center;
+}
+/* one clean row: settings · backpack · home · ask eon · cross */
+#eon-controls #eon-settings { order: 1; }
+#eon-controls #eon-bag      { order: 2; }
+#eon-controls #eon-home-btn { order: 3; }
+#eon-controls #eon-ask-chip { order: 4; }
+#eon-controls #eon-power    { order: 5; }
+.eon-chip {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(31, 109, 255, .18);
+  background: rgba(255, 255, 255, .92);
+  color: var(--eon-ocean);
+  box-shadow: 0 4px 12px rgba(16, 24, 40, .16);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  transition: transform .15s, background .15s, color .15s;
+  backdrop-filter: blur(6px);
+}
+.eon-chip:hover { transform: translateY(-2px); background: #fff; }
+/* "on" state for toggle buttons (home-lock, messages) */
+.eon-chip.active { background: var(--eon-ocean); color: #fff; border-color: var(--eon-ocean); }
+
+/* ---------------- Settings popover ---------------- */
+.eon-panel {
+  position: absolute; right: 12px; bottom: 48px; width: 196px;
+  background: rgba(255, 255, 255, .96); backdrop-filter: blur(10px);
+  border: 1px solid rgba(31, 109, 255, .18); border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(16, 24, 40, .2); padding: 10px 11px;
+  pointer-events: auto; z-index: 5; font-family: var(--eon-font);
+  opacity: 0; transform: translateY(8px) scale(.98); transform-origin: bottom right;
+  transition: opacity .18s ease, transform .18s cubic-bezier(.2, .8, .3, 1);
+  visibility: hidden;
+}
+.eon-panel.show { opacity: 1; transform: translateY(0) scale(1); visibility: visible; }
+.eon-pan-h { font: 700 9.5px/1 var(--eon-font); letter-spacing: .07em; text-transform: uppercase;
+  color: #8a93b8; margin: 2px 2px 4px; }
+.eon-pan-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.eon-pill {
+  font: 600 11px/1 var(--eon-font); color: var(--eon-navy);
+  border: 1px solid #d8deea; background: #eef2ff; border-radius: 7px;
+  padding: 5px 8px; cursor: pointer; transition: .12s;
+}
+.eon-pill:hover { background: #e0e7ff; }
+.eon-pill.on { background: var(--eon-ocean); color: #fff; border-color: var(--eon-ocean); }
+.eon-range { width: 100%; accent-color: var(--eon-ocean); cursor: pointer; }
+
+/* --- settings: collapsible accordion (scales as options grow) --- */
+.eon-pan-title { font: 800 12px var(--eon-font); color: var(--eon-navy); margin: 0 2px 6px; }
+.eon-grp {
+  display: flex; align-items: center; gap: 6px; width: 100%; border: 0; cursor: pointer;
+  background: transparent; padding: 8px 4px; color: var(--eon-navy);
+  font: 800 11px var(--eon-font); border-top: 1px solid rgba(31, 109, 255, .1);
+}
+.eon-grp:first-of-type { border-top: 0; }
+.eon-grp:hover { color: var(--eon-ocean); }
+.eon-grp .chev { margin-left: auto; opacity: .5; font-size: 13px; transition: transform .2s ease; }
+.eon-grp.open .chev { transform: rotate(180deg); }
+.eon-sec { max-height: 0; overflow: hidden; transition: max-height .22s ease; }
+.eon-sec.open { max-height: 360px; padding-bottom: 4px; }
+#eon-energy-v { font-weight: 600; color: #8a93b8; letter-spacing: 0; text-transform: none; }
+/* When EON is hidden, the lone bring-back button gets a gentle pulse. */
+.eon-chip.bring-back { background: var(--eon-lime); color: var(--eon-navy); border-color: var(--eon-lime); }
+
+/* Respect users who prefer less motion: dim, don't animate wildly. */
+@media (prefers-reduced-motion: reduce) {
+  .eon-bubble { transition: opacity .2s linear; }
+}
+
+/* Hide EON cleanly on very small screens (optional, keeps mobile clean). */
+@media (max-width: 560px) {
+  #eon-layer.eon-hide-mobile { display: none; }
+}

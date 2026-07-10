@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Google Fonts: Plus Jakarta Sans (display), Inter (body), JetBrains Mono (numbers) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5 CSS + Bootstrap Icons (CDN) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Centralized stylesheet -->
+  <link href="./assets/css/style.css" rel="stylesheet">
+  <!-- EON Intelligence Center (dashboard hub) -->
+  <link href="./assets/css/intelligence.css" rel="stylesheet">
+  <!-- EON · AI Companion styles (isolated module) -->
+  <link href="./ai-companion/css/companion.css" rel="stylesheet">
+  <link href="./ai-companion/css/home.css" rel="stylesheet">
+  <link href="./ai-companion/css/animations.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="./assets/img/favicon.svg">
+  <title>Dashboard · OppTrack</title>
+</head>
+<!-- data-page tells app.js which initializer to run -->
+<body data-page="dashboard" class="app-shell viewer-mode">
+
+  <!-- ============ Shared sidebar (rendered by app.js) ============ -->
+  <aside id="sidebar" class="sidebar"></aside>
+
+  <div class="main">
+    <!-- ============ Shared topbar (rendered by app.js) ============ -->
+    <header id="topbar" class="topbar"></header>
+
+    <!-- ============ Page content ============ -->
+    <div class="page-wrap">
+      <!-- Summary cards (auto-calculated by app.js) -->
+      <section class="mb-4">
+        <div id="statGrid" class="stat-grid"></div>
+      </section>
+
+      <!-- EON Signal radar (owner-only derived intelligence) -->
+      <div class="card card-pad mb-4 owner-only" id="signalCard">
+        <div class="d-flex align-items-center mb-2">
+          <div class="section-title mb-0"><i class="bi bi-broadcast-pin me-1"></i>EON signal radar</div>
+          <span class="ms-auto text-faint" style="font-size:11.5px">Highest-return moves, by your own patterns</span>
+        </div>
+        <div id="signalPanel" class="sig-list"></div>
+      </div>
+
+      <!-- Productivity Signal Layer: realistic day + tracks + pulse -->
+      <div class="grid-2 mb-4">
+        <div class="card card-pad owner-only">
+          <div class="section-title mb-2"><i class="bi bi-sun me-1"></i>EON's realistic day</div>
+          <div id="realisticDay" class="rd-list"></div>
+        </div>
+        <div class="card card-pad owner-only">
+          <div class="section-title mb-2"><i class="bi bi-diagram-2 me-1"></i>Your tracks</div>
+          <div id="tracksPanel" class="trk-list"></div>
+        </div>
+      </div>
+      <div class="card card-pad mb-4 owner-only">
+        <div class="section-title mb-2"><i class="bi bi-activity me-1"></i>Productivity pulse</div>
+        <div id="pulsePanel"></div>
+      </div>
+
+      <div class="grid-2 mb-4" style="grid-template-columns: 1.4fr 1fr;">
+        <!-- Left column: deadline alerts + recent opportunities -->
+        <div class="stack-16">
+          <!-- Deadline Alert Widget (30 / 14 / 7 / 3-day colour thresholds) -->
+          <div class="card card-pad">
+            <div class="d-flex align-items-center mb-3">
+              <div class="section-title mb-0">Deadline alerts</div>
+              <a href="opportunities.html" class="ms-auto" style="font-size:12.5px">View all</a>
+            </div>
+            <div id="deadlineAlerts"></div>
+          </div>
+
+          <!-- Recent opportunities -->
+          <div class="card table-card">
+            <div class="card-head"><h3>Recent opportunities</h3>
+              <a href="opportunities.html" class="ms-auto btn btn-ghost btn-sm">Open list</a>
+            </div>
+            <table class="dt">
+              <thead><tr><th>Opportunity</th><th>Status</th><th>Deadline</th></tr></thead>
+              <tbody id="recentOpps"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right column: notifications -->
+        <div class="stack-16">
+          <!-- Notifications panel -->
+          <div class="card card-pad">
+            <div class="section-title">Notifications</div>
+            <div id="notifPanel" class="feed"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar + Reminders side by side (stacks on mobile) -->
+      <div class="grid-2 mb-4">
+        <!-- Calendar widget (click a day to see / add reminders) -->
+        <div class="card card-pad">
+          <div id="calendar"></div>
+          <p class="text-faint mt-2 mb-0" style="font-size:11.5px"><i class="bi bi-info-circle me-1"></i>Click any date to see its reminders or add one. Green dots = reminders, red = deadline.</p>
+        </div>
+
+        <!-- Reminder list (full CRUD + status) — private, owner only -->
+        <div class="card card-pad owner-only">
+          <div class="d-flex align-items-center mb-2">
+            <div class="section-title mb-0">Reminders</div>
+            <button class="btn btn-soft btn-sm owner-only ms-auto" id="addReminderBtn"><i class="bi bi-plus-lg me-1"></i>Add</button>
+          </div>
+          <div id="reminderList" class="rem-list"></div>
+        </div>
+      </div>
+
+      <!-- Quick actions (owner-only: each button opens a guarded add form) -->
+      <div class="card card-pad owner-only">
+        <div class="section-title">Quick actions</div>
+        <div id="quickActions" class="qa-grid"></div>
+      </div>
+    </div><!-- /.page-wrap -->
+  </div><!-- /.main -->
+
+  <!-- Bootstrap bundle (modals, dropdowns) + centralized app engine -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Security layer MUST load before app.js so it can gate the page -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="./assets/js/firebase-config.js"></script>
+  <script src="./assets/js/drive.js"></script>
+  <script src="./assets/js/security.js"></script>
+  <script src="./assets/js/app.js"></script>
+  <!-- EON Intelligence Center — shares app.js globals; renders the hub under the KPIs -->
+  <script src="./assets/js/intelligence.js"></script>
+
+  <!-- ===== EON · AI Companion (isolated module) — remove these 2 blocks to remove EON ===== -->
+  <script type="importmap">
+  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script type="module" src="./ai-companion/js/main.js"></script>
+  <script type="module" src="./ai-companion/eon-brain/eon-brain.js"></script>
+  <!-- Any-Dataset Live Prover — registers window.EonProver for the bag + intelligence hub -->
+  <script type="module" src="./ai-companion/eon-brain/analytics/prover.js"></script>
+</body>
+</html>

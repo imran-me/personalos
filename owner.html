@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="./assets/css/style.css" rel="stylesheet">
+  <!-- EON · AI Companion styles (isolated module) -->
+  <link href="./ai-companion/css/companion.css" rel="stylesheet">
+  <link href="./ai-companion/css/home.css" rel="stylesheet">
+  <link href="./ai-companion/css/animations.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="./assets/img/favicon.svg">
+  <title>Owner Dashboard · OppTrack</title>
+</head>
+<!-- PROTECTED PAGE: security.js redirects non-owners to login.html
+     (see Security.PROTECTED_PAGES). data-page="owner" runs initOwner. -->
+<body data-page="owner" class="app-shell viewer-mode">
+
+  <aside id="sidebar" class="sidebar"></aside>
+
+  <div class="main">
+    <header id="topbar" class="topbar"></header>
+
+    <div class="page-wrap">
+      <!-- Owner-only banner -->
+      <div class="card card-pad mb-4 owner-banner">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <span class="stat-ico t-primary" style="width:48px;height:48px"><i class="bi bi-shield-lock-fill" style="font-size:20px"></i></span>
+          <div class="flex-grow-1">
+            <b style="font-size:16px;display:block">Owner control centre</b>
+            <span class="text-soft" style="font-size:13px">Manage every module here. These tools are hidden from public visitors.</span>
+          </div>
+          <span id="sessionInfo" class="owner-pill"></span>
+        </div>
+      </div>
+
+      <!-- Content counts (rendered by app.js) -->
+      <section class="mb-4">
+        <div class="section-title">Content overview</div>
+        <div id="ownerStats" class="stat-grid"></div>
+      </section>
+
+      <!-- Manage each module -->
+      <section class="mb-4">
+        <div class="section-title">Manage content</div>
+        <div id="ownerManage" class="qa-grid"></div>
+      </section>
+
+      <!-- Quick add -->
+      <section class="mb-4">
+        <div class="section-title">Quick add</div>
+        <div id="ownerQuickAdd" class="qa-grid"></div>
+      </section>
+
+      <!-- Data & danger zone -->
+      <div class="grid-2" style="grid-template-columns:1fr 1fr">
+        <div class="card card-pad">
+          <div class="section-title">Backup &amp; restore</div>
+          <p class="text-soft" style="font-size:13px">Export keeps a dated JSON copy of everything. Import replaces all data from a backup file.</p>
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-soft btn-sm" id="ownerExport"><i class="bi bi-download me-1"></i>Export backup</button>
+            <button class="btn btn-soft btn-sm" id="ownerImport"><i class="bi bi-upload me-1"></i>Import backup</button>
+            <input type="file" id="ownerImportFile" accept="application/json" hidden>
+          </div>
+        </div>
+        <div class="card card-pad danger-zone">
+          <div class="section-title text-danger">Danger zone</div>
+          <p class="text-soft" style="font-size:13px">Resetting wipes your current data and reloads the built-in sample records. Export first.</p>
+          <button class="btn btn-sm btn-danger-soft" id="ownerReset"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset to sample data</button>
+        </div>
+      </div>
+
+      <!-- Google Drive auto-backup -->
+      <div class="card card-pad mt-4" id="driveCard">
+        <div class="section-title">Google Drive backup <span class="text-faint" style="font-weight:500;font-size:12px">— optional</span></div>
+        <p class="text-soft" style="font-size:13px">
+          Your data is always saved to <b>Firebase</b> automatically on every device — Drive is just an
+          <b>optional extra backup</b> mirrored to <code>opptrack-backup.json</code> in your Drive.
+          Because Google only lets a site write to your Drive after you sign in, this is a
+          <b>per-device, one-time connect</b>: click <b>Connect Drive</b> on a device and backups run
+          quietly from then on. On devices where you don't connect, nothing pops up and your edits
+          still save to Firebase as normal.
+        </p>
+        <div id="driveStatus" class="mb-3"></div>
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-soft btn-sm" id="driveConnect"><i class="bi bi-google me-1"></i>Connect Drive</button>
+          <button class="btn btn-soft btn-sm" id="driveBackupNow"><i class="bi bi-cloud-arrow-up me-1"></i>Back up now</button>
+          <a class="btn btn-ghost btn-sm" id="driveOpen" target="_blank" rel="noopener" hidden><i class="bi bi-box-arrow-up-right me-1"></i>Open in Drive</a>
+        </div>
+      </div>
+
+      <!-- Security tips -->
+      <div class="card card-pad mt-4">
+        <div class="section-title">Security &amp; sync</div>
+        <ul class="text-soft owner-tips">
+          <li>Your data is stored live in <b>Firebase Firestore</b> — every device that opens the site shows the same content, and your edits sync everywhere automatically.</li>
+          <li>Sign-in is handled by <b>Firebase Authentication</b>. Only the owner account can write; everyone else is read-only — enforced on the server, so it can't be bypassed from dev-tools.</li>
+          <li>To change your password: <b>Firebase Console → Authentication → Users</b>, or use the account's "reset password" email. Always <b>Log out</b> on shared devices.</li>
+        </ul>
+      </div>
+    </div><!-- /.page-wrap -->
+  </div><!-- /.main -->
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Security MUST load before app.js so the page can be guarded. -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="./assets/js/firebase-config.js"></script>
+  <script src="./assets/js/drive.js"></script>
+  <script src="./assets/js/security.js"></script>
+  <script src="./assets/js/app.js"></script>
+
+  <!-- ===== EON · AI Companion (isolated module) — remove these 2 blocks to remove EON ===== -->
+  <script type="importmap">
+  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script type="module" src="./ai-companion/js/main.js"></script>
+  <script type="module" src="./ai-companion/eon-brain/eon-brain.js"></script>
+</body>
+</html>
