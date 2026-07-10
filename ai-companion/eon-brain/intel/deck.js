@@ -25,6 +25,7 @@ import '../intel/twin.js';        // registers window.EonTwin (feature b)
 import '../intel/selfcorrect.js'; // registers window.EonSelfCorrect (feature c)
 import '../intel/crisis.js';      // registers window.EonCrisis (feature d — market fusion, kept for the money coach)
 import '../analytics/oppradar.js';// registers window.EonOppRadar (opportunity discovery)
+import '../analytics/scholar.js'; // registers window.EonScholar (the Academic brain)
 import '../analytics/graph.js';   // registers window.EonGraph (relationship-graph intelligence)
 import '../analytics/learn.js';   // registers window.EonLearn (adaptive learning loop)
 import '../analytics/finance.js'; // registers window.EonFinance (personal-finance coach)
@@ -155,6 +156,25 @@ function injectStyle() {
   #eonDeck .ed-chip{font-size:11px;border:1px solid var(--line);border-radius:8px;padding:3px 9px;color:var(--text-soft);background:var(--surface-2,#fbfcfe)}
   #eonDeck .ed-chip b{color:#16203a;font-weight:600}
   #eonDeck .ed-chip i{font-style:normal;font-family:"JetBrains Mono";font-size:9px;opacity:.6;margin-left:5px;text-transform:uppercase}
+  /* academic space */
+  #eonDeck .ed-improve{border-left:3px solid ${AM}}
+  #eonDeck .ed-improve-head{display:flex;gap:13px;align-items:flex-start;padding:4px 0 12px;border-bottom:1px dashed var(--line,#e7eaf1);margin-bottom:10px}
+  #eonDeck .ed-impgrade{font:800 17px "JetBrains Mono";color:${R};background:#fdeceb;border-radius:10px;padding:7px 12px;flex:0 0 auto}
+  #eonDeck .ed-improve-head b{font-size:14px;color:#111634;display:block}
+  #eonDeck .ed-improve-head small{color:var(--text-soft,#5b6678);font-size:12.5px;line-height:1.5;display:block;margin-top:2px}
+  #eonDeck .ed-plan{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--line-2,#eef1f6)}
+  #eonDeck .ed-plan:last-of-type{border-bottom:0}
+  #eonDeck .ed-plann{width:22px;height:22px;flex:0 0 auto;border-radius:7px;background:#fdf2e0;color:${AM};display:grid;place-items:center;font:700 11px "JetBrains Mono"}
+  #eonDeck .ed-plan b{font-size:13px;color:#16203a;text-transform:capitalize}
+  #eonDeck .ed-plan small{color:var(--text-soft);font-size:11.5px}
+  #eonDeck .ed-planres{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+  #eonDeck .ed-planres a{display:inline-flex;align-items:center;gap:5px;font:600 11px "Inter";color:${A};border:1px solid var(--line,#e7eaf1);border-radius:999px;padding:3px 10px;text-decoration:none}
+  #eonDeck .ed-planres a:hover{border-color:${A};background:#eef0fe}
+  #eonDeck .ed-improve-actions{display:flex;gap:9px;margin-top:13px;flex-wrap:wrap}
+  #eonDeck .ed-focuschip{display:inline-flex;align-items:center;gap:7px;background:#fdf2e0;border:1px solid #f2dfb8;color:#7a4d06;border-radius:999px;padding:5px 7px 5px 12px;font:600 12px "Inter";margin:0 6px 6px 0}
+  #eonDeck .ed-focuschip em{font-style:normal;font-size:10px;opacity:.7}
+  #eonDeck .ed-focusrm{border:0;background:none;color:inherit;opacity:.6;cursor:pointer;font-size:11px}
+  #eonDeck .ed-focusrm:hover{opacity:1}
   /* calibration verification table */
   #eonDeck .ed-verify-btn{margin-top:12px;border:0;background:none;color:${A};font:600 12px "Inter";cursor:pointer;padding:0}
   #eonDeck .ed-verify-btn:hover{text-decoration:underline}
@@ -384,6 +404,65 @@ function cardLearn() {
   return card('Adaptive learning', 'online learning — Eon tunes to your behaviour', `${rows}<p class="ed-empty" style="margin-top:10px">${s.line}</p>`);
 }
 
+/* ---------- Academic space cards (§6) ---------- */
+function cardAcadFusion(s) {
+  const rows = (s.fusion || []).map((f) => `
+    <a class="ed-row" href="${esc(f.link || 'academics.html')}">
+      <span class="ed-cd ${f.days != null && f.days <= 2 ? 'soon' : ''}">${f.days == null ? '—' : f.days < 0 ? 'over' : f.days === 0 ? 'today' : f.days + 'd'}</span>
+      <span style="flex:1;min-width:0"><b>${esc(f.label)}</b><small>${esc(f.kind)}${f.course ? ' · ' + esc(f.course) : ''} · <i style="font-style:italic">${esc(f.why)}</i></small></span>
+    </a>`).join('');
+  return card('Everything due, fused', 'tests + assignments + opportunities, one realistic order', rows || `<p class="ed-empty">Nothing pressing across your academic and opportunity pipelines. 🌿</p>`);
+}
+function cardAcadPerf(s) {
+  const p = s.perf || {};
+  if (!p.n) return card('Performance', 'course-wise & topic-wise results', `<p class="ed-empty">Log assessment results (marks, topics, class average) and Eon maps exactly where you're strong and weak.</p>`);
+  const cRows = (p.courses || []).slice(0, 4).map((c) => {
+    const v = Math.round(c.avg * 100); const tone = v >= 75 ? G : v >= 60 ? AM : R;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+      <span style="flex:0 0 96px;font:700 11.5px 'JetBrains Mono';color:#16203a">${esc(c.short)}</span>
+      <span style="flex:1;height:6px;border-radius:3px;background:var(--line,#e7eaf1)"><span style="display:block;height:100%;border-radius:3px;width:${v}%;background:${tone}"></span></span>
+      <span class="ed-num" style="font-size:12px;color:${tone};min-width:34px;text-align:right">${v}%</span>
+      ${c.trend > 0.05 ? `<i class="bi bi-arrow-up-right" style="color:${G};font-size:11px"></i>` : c.trend < -0.05 ? `<i class="bi bi-arrow-down-right" style="color:${R};font-size:11px"></i>` : '<span style="width:11px"></span>'}
+    </div>`;
+  }).join('');
+  const tRows = (p.topics || []).slice(0, 3).map((t) => `<span class="ed-chip"><b>${esc(t.topic)}</b><i>${Math.round(t.avg * 100)}%</i></span>`).join('');
+  return card('Performance', `${p.n} results analysed · course & topic level`, `${cRows}${tRows ? `<div style="font:700 10px Inter;text-transform:uppercase;letter-spacing:.07em;color:var(--text-faint);margin:12px 0 6px">Weakest topics first</div><div class="ed-chips" style="margin-top:0">${tRows}</div>` : ''}${p.pattern ? `<p class="ed-empty" style="margin-top:12px"><i class="bi bi-lightbulb" style="color:${AM};margin-right:5px"></i>${p.pattern}</p>` : ''}`);
+}
+function cardImprove(s) {
+  const im = s.improve || {};
+  const focus = s.focus || [];
+  if ((!im.findings || !im.findings.length) && !focus.length) return '';
+  const f = im.top;
+  const planRows = f && im.plan ? im.plan.map((st) => `
+    <div class="ed-plan">
+      <span class="ed-plann">${st.order}</span>
+      <div style="flex:1;min-width:0">
+        <b>${esc(st.topic)}</b><small> · currently ${esc(st.score)} · budget ~${st.hours}h</small>
+        <div class="ed-planres">${st.resources.map((r) => `<a href="${esc(r.url)}" target="_blank" rel="noopener"><i class="bi bi-play-circle"></i>${esc(r.label)}</a>`).join('')}</div>
+      </div>
+    </div>`).join('') : '';
+  const focusRows = focus.map((x) => `<span class="ed-focuschip" title="${esc(x.reason || '')}"><i class="bi bi-bullseye"></i>${esc(shortName(x.course))} <em>since ${esc(x.since)}</em><button class="ed-focusrm" data-course="${esc(x.course)}">✕</button></span>`).join('');
+  return `<div class="ed-card ed-improve">
+    <div class="ed-ct">Improvement engine</div>
+    <div class="ed-cs">Eon found the weak spot and built the study plan — with real resources</div>
+    ${f ? `<div class="ed-improve-head"><span class="ed-impgrade">${esc(f.grade)}</span><div><b>${esc(f.short)}</b><small>${esc(f.why)}</small></div></div>${planRows}
+      <div class="ed-improve-actions">
+        <button class="ed-cardbtn" id="edFocusAdd" data-course="${esc(f.course)}" data-why="${esc(f.why)}"><i class="bi bi-bullseye me-1"></i>Add to Focus List</button>
+        <button class="ed-cardbtn" id="edPlanRemind"><i class="bi bi-alarm me-1"></i>Remind me to study these</button>
+      </div>` : ''}
+    ${focusRows ? `<div style="font:700 10px Inter;text-transform:uppercase;letter-spacing:.07em;color:var(--text-faint);margin:14px 0 7px">Active focus</div><div>${focusRows}</div>` : ''}
+  </div>`;
+}
+function shortName(label) { return String(label || '').split(' — ')[0]; }
+function cardAcadAnomalies(s) {
+  const an = s.anomalies || [];
+  if (!an.length) return '';
+  const ico = { attendance: 'person-x', grade: 'graph-down-arrow', workload: 'stack' };
+  return card('Academic anomalies', 'unusual for YOU — caught early', an.map((a) => `
+    <div class="ed-leak"><span class="amt" style="color:${a.kind === 'grade' ? R : AM};font-size:13px"><i class="bi bi-${ico[a.kind] || 'exclamation-triangle'}"></i></span>
+    <span><b>${esc(a.label)}</b><small>${esc(a.why)}</small></span></div>`).join(''));
+}
+
 function card(title, sub, body) { return `<div class="ed-card"><div class="ed-ct">${title}</div><div class="ed-cs">${sub}</div>${body}</div>`; }
 
 function liveSection(m, L) {
@@ -462,12 +541,15 @@ const EonDeck = {
     const bizCards = [cardBoard(), cardTwin(), cardAgent(), cardOppRadar()].filter(Boolean);
     let graph = null; try { graph = window.EonGraph && window.EonGraph.compute(); } catch {}
     const hasNet = !!(graph && graph.ok);
+    let scholar = null; try { scholar = window.EonScholar && window.EonScholar.compute(); } catch {}
+    const hasAcad = !!(scholar && scholar.ok);
     // quick-jump navigation for the growing page (Live / Signals / sections)
     const navBtn = (id, ico, label) => `<button class="ed-navbtn" data-go="${id}"><i class="bi bi-${ico}"></i>${label}</button>`;
     const navRow = `<div class="ed-nav" id="edNav">
       ${navBtn('edLiveBox', 'activity', 'Live')}
       ${navBtn('edProverSec', 'upload', 'Prover')}
       ${navBtn('edNativeSlot', 'broadcast-pin', 'Signals')}
+      ${hasAcad ? navBtn('edSecAcad', 'mortarboard', 'Academics') : ''}
       ${navBtn('edSecIntel', 'graph-up-arrow', 'Intelligence')}
       ${navBtn('edSecBiz', 'briefcase', 'Business')}
       ${hasNet ? navBtn('edSecNet', 'diagram-3', 'Network') : ''}
@@ -486,6 +568,13 @@ const EonDeck = {
       <!-- host site's native panels (Signal radar / Realistic day / Tracks / Pulse)
            are adopted into this slot after each render — see the adopt logic below -->
       <div id="edNativeSlot" class="ed-sec"></div>
+
+      ${hasAcad ? `<div class="ed-sec" id="edSecAcad">
+        <div class="ed-seclabel"><b>Academics</b></div>
+        ${(() => { const imp = cardImprove(scholar); return imp ? `<div class="ed-grid" style="margin-bottom:16px">${imp}</div>` : ''; })()}
+        <div class="ed-grid ed-2">${cardAcadFusion(scholar)}${cardAcadPerf(scholar)}</div>
+        ${(() => { const an = cardAcadAnomalies(scholar); return an ? `<div class="ed-grid" style="margin-top:16px">${an}</div>` : ''; })()}
+      </div>` : ''}
 
       <div class="ed-sec" id="edSecIntel">
         <div class="ed-seclabel"><b>Intelligence</b></div>
@@ -526,6 +615,15 @@ const EonDeck = {
     if (cv) cv.onclick = () => { const t = host.querySelector('#edCalTable'); if (t) { t.hidden = !t.hidden; cv.textContent = cv.textContent.replace(/[▾▴]\s*$/, '').trim() + (t.hidden ? ' ▾' : ' ▴'); } };
     const orb = host.querySelector('#edOppRadarBody');
     if (orb && !orb._hydrated) { orb._hydrated = true; try { window.EonOppRadar && window.EonOppRadar.render(orb); } catch {} }
+    // academic space actions
+    const fa = host.querySelector('#edFocusAdd');
+    if (fa) fa.onclick = () => { try { window.EonScholar.addFocus(fa.dataset.course, fa.dataset.why); this.render(); } catch {} };
+    host.querySelectorAll('.ed-focusrm').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); try { window.EonScholar.removeFocus(b.dataset.course); this.render(); } catch {} }; });
+    const pr = host.querySelector('#edPlanRemind');
+    if (pr) pr.onclick = async () => {
+      pr.disabled = true;
+      try { const s = window.EonScholar.compute(); const n = await window.EonScholar.remindPlan(s.improve && s.improve.plan, s.improve && s.improve.top ? s.improve.top.short : 'course'); pr.innerHTML = `<i class="bi bi-check2-circle me-1"></i>${n} study reminders set`; } catch { pr.disabled = false; }
+    };
     const ask = host.querySelector('#edAsk'), askBtn = host.querySelector('#edAskBtn');
     const doAsk = async () => {
       const q = (ask && ask.value || '').trim(); if (!q) return;
