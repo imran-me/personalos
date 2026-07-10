@@ -23,7 +23,8 @@ import '../analytics/impact.js';
 import '../intel/boardroom.js';   // registers window.EonBoardroom (feature a)
 import '../intel/twin.js';        // registers window.EonTwin (feature b)
 import '../intel/selfcorrect.js'; // registers window.EonSelfCorrect (feature c)
-import '../intel/crisis.js';      // registers window.EonCrisis (feature d)
+import '../intel/crisis.js';      // registers window.EonCrisis (feature d — market fusion, kept for the money coach)
+import '../analytics/oppradar.js';// registers window.EonOppRadar (opportunity discovery)
 import '../analytics/graph.js';   // registers window.EonGraph (relationship-graph intelligence)
 import '../analytics/learn.js';   // registers window.EonLearn (adaptive learning loop)
 import '../analytics/finance.js'; // registers window.EonFinance (personal-finance coach)
@@ -202,6 +203,13 @@ function injectStyle() {
   #eonDeck .ed-row .n{font-family:"JetBrains Mono";font-weight:700;font-size:15px;color:#16203a;min-width:36px}
   #eonDeck .ed-cardbtn{margin-top:14px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;font:700 12.5px "Inter";color:${A};cursor:pointer;transition:.15s}
   #eonDeck .ed-cardbtn:hover{background:#eef0fe;border-color:${A}}
+  /* quick-jump navigation (sticky at the top of the page) */
+  #eonDeck .ed-nav{position:sticky;top:0;z-index:6;display:flex;gap:7px;flex-wrap:wrap;padding:9px 0 11px;margin-bottom:6px;
+    background:linear-gradient(180deg,var(--canvas,#f5f7fb) 82%,transparent)}
+  #eonDeck .ed-navbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line,#e7eaf1);background:#fff;
+    border-radius:999px;padding:7px 14px;font:600 12px "Inter",system-ui;color:var(--text-soft,#5b6678);cursor:pointer;transition:.15s}
+  #eonDeck .ed-navbtn i{font-size:12px;color:${A}}
+  #eonDeck .ed-navbtn:hover{border-color:${A};color:${A};transform:translateY(-1px)}
   /* live working area (top) */
   #eonDeck .ed-live{display:grid;grid-template-columns:1fr 1.15fr;border:1px solid var(--line,#e7eaf1);border-radius:16px;overflow:hidden;margin-bottom:14px;background:#fff}
   #eonDeck .ed-live-l{padding:20px 22px;display:flex;flex-direction:column;justify-content:center;border-right:1px solid var(--line-2,#eef1f6)}
@@ -352,8 +360,8 @@ function cardCalibration() {
 function cardSelfCorrect() {
   return card('Self-correction', 'reflection loop — Eon checks &amp; reweights itself', `<p class="ed-empty">Watch Eon audit its own prediction, catch where it's over-confident against its track record, explain the miss, and <b>reweight itself live</b> — a correction that persists.</p><button class="ed-cardbtn" id="edSelf"><i class="bi bi-arrow-repeat me-1"></i>Run the self-check</button>`);
 }
-function cardCrisis() {
-  return card('Crisis feed', 'live markets fused with your exposure', `<div id="edCrisisBody"><p class="ed-empty">Reaching the market feed…</p></div>`);
+function cardOppRadar() {
+  return card('Opportunity radar', 'live contests & scholarships matched to your fields', `<div id="edOppRadarBody"><p class="ed-empty">Scanning for opportunities that fit you…</p></div>`);
 }
 
 function cardGraph(g) {
@@ -451,35 +459,49 @@ const EonDeck = {
     const L = live();
     // Business section only shows cards that have real content (no empty space).
     const moneyCoach = ((m.finance && m.finance.hasData) || (m.leaks && m.leaks.hasData)) ? cardMoney(m.finance, m.leaks) : '';
-    const bizCards = [cardBoard(), cardTwin(), cardAgent(), cardCrisis()].filter(Boolean);
+    const bizCards = [cardBoard(), cardTwin(), cardAgent(), cardOppRadar()].filter(Boolean);
+    let graph = null; try { graph = window.EonGraph && window.EonGraph.compute(); } catch {}
+    const hasNet = !!(graph && graph.ok);
+    // quick-jump navigation for the growing page (Live / Signals / sections)
+    const navBtn = (id, ico, label) => `<button class="ed-navbtn" data-go="${id}"><i class="bi bi-${ico}"></i>${label}</button>`;
+    const navRow = `<div class="ed-nav" id="edNav">
+      ${navBtn('edLiveBox', 'activity', 'Live')}
+      ${navBtn('edProverSec', 'upload', 'Prover')}
+      ${navBtn('edNativeSlot', 'broadcast-pin', 'Signals')}
+      ${navBtn('edSecIntel', 'graph-up-arrow', 'Intelligence')}
+      ${navBtn('edSecBiz', 'briefcase', 'Business')}
+      ${hasNet ? navBtn('edSecNet', 'diagram-3', 'Network') : ''}
+      ${navBtn('edSecRep', 'clipboard-data', 'Reports')}
+    </div>`;
     host.innerHTML = `
       <div class="ed-hero">
         <div><h1>Intelligence</h1><p>Everything Eon reads, predicts and decides across your operation — one brain, explained.</p></div>
       </div>
 
+      ${navRow}
       ${liveSection(m, L)}
       ${askBar()}
-      <div class="ed-sec"><div class="ed-grid">${cardProver()}</div></div>
+      <div class="ed-sec" id="edProverSec"><div class="ed-grid">${cardProver()}</div></div>
 
       <!-- host site's native panels (Signal radar / Realistic day / Tracks / Pulse)
            are adopted into this slot after each render — see the adopt logic below -->
       <div id="edNativeSlot" class="ed-sec"></div>
 
-      <div class="ed-sec">
+      <div class="ed-sec" id="edSecIntel">
         <div class="ed-seclabel"><b>Intelligence</b></div>
         <div class="ed-grid ed-2">${cardWin(m.win)}${cardStory(m.eda) || cardProver()}</div>
         <div class="ed-grid ed-2" style="margin-top:16px">${cardCalibration()}${cardSelfCorrect()}</div>
       </div>
 
-      <div class="ed-sec">
+      <div class="ed-sec" id="edSecBiz">
         <div class="ed-seclabel"><b>Business</b></div>
         ${moneyCoach ? `<div class="ed-grid" style="margin-bottom:16px">${moneyCoach}</div>` : ''}
         <div class="ed-grid ${bizCards.length >= 3 ? 'ed-3' : bizCards.length === 2 ? 'ed-2' : ''}">${bizCards.join('')}</div>
       </div>
 
-      ${(() => { let g = null; try { g = window.EonGraph && window.EonGraph.compute(); } catch {} return (g && g.ok) ? `<div class="ed-sec"><div class="ed-seclabel"><b>Network</b></div><div class="ed-grid">${cardGraph(g)}</div></div>` : ''; })()}
+      ${hasNet ? `<div class="ed-sec" id="edSecNet"><div class="ed-seclabel"><b>Network</b></div><div class="ed-grid">${cardGraph(graph)}</div></div>` : ''}
 
-      <div class="ed-sec">
+      <div class="ed-sec" id="edSecRep">
         <div class="ed-seclabel"><b>Reports</b></div>
         ${m.impact ? `<div class="ed-grid" style="margin-bottom:16px">${cardImpact(m.impact)}</div>` : ''}
         ${(() => { const rep = [cardRadar(m.radar, m.overdue), cardSources(m.entities, m.records), cardLearn()].filter(Boolean); return `<div class="ed-grid ${rep.length >= 3 ? 'ed-3' : 'ed-2'}">${rep.join('')}</div>`; })()}
@@ -487,6 +509,9 @@ const EonDeck = {
 
     // adopt the native panels into their slot (right after the prover)
     try { const slot = host.querySelector('#edNativeSlot'); if (native && slot) slot.appendChild(native); } catch {}
+
+    // quick-jump navigation
+    host.querySelectorAll('.ed-navbtn').forEach((b) => { b.onclick = () => { try { const t = host.querySelector('#' + b.dataset.go) || document.getElementById(b.dataset.go); t && t.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {} }; });
 
     host.querySelectorAll('#edProve, .ed-provetrigger').forEach((pv) => { pv.onclick = () => { try { window.EonProver && window.EonProver.openOverlay({ onReact: () => setTimeout(() => this.render(), 400) }); } catch {} }; });
     const bd = host.querySelector('#edBoard');
@@ -499,8 +524,8 @@ const EonDeck = {
     if (ag) ag.onclick = () => { try { window.EonAgent && window.EonAgent.open(); } catch {} };
     const cv = host.querySelector('#edCalVerify');
     if (cv) cv.onclick = () => { const t = host.querySelector('#edCalTable'); if (t) { t.hidden = !t.hidden; cv.textContent = cv.textContent.replace(/[▾▴]\s*$/, '').trim() + (t.hidden ? ' ▾' : ' ▴'); } };
-    const cb = host.querySelector('#edCrisisBody');
-    if (cb && !cb._hydrated) { cb._hydrated = true; try { window.EonCrisis && window.EonCrisis.render(cb); } catch {} }
+    const orb = host.querySelector('#edOppRadarBody');
+    if (orb && !orb._hydrated) { orb._hydrated = true; try { window.EonOppRadar && window.EonOppRadar.render(orb); } catch {} }
     const ask = host.querySelector('#edAsk'), askBtn = host.querySelector('#edAskBtn');
     const doAsk = async () => {
       const q = (ask && ask.value || '').trim(); if (!q) return;
