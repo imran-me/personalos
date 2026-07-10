@@ -78,14 +78,19 @@ function view(s) {
     <div style="margin-top:6px;font-size:11px;color:var(--text-faint)">Source: open exchange rates${s.at ? ' · ' + esc(s.at) : ''}. Eon fuses live markets with your ledger.</div>`;
 }
 
+let _last = null, _lastAt = 0;
 const EonCrisis = {
   scan,
-  /** render into a container (async): shows a live FX signal fused with exposure. */
+  /** render into a container (async): shows a live FX signal fused with exposure.
+      Caches the reading for 60s so re-renders/re-mounts never double-hit the network. */
   async render(el) {
     if (!el) return;
-    el.innerHTML = `<p class="ed-empty"><span class="ed-spin"></span>Checking live markets…</p>`;
-    try { const s = await scan(); el.innerHTML = view(s); try { window.EonTrace && window.EonTrace.unshift({ t: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), line: `Crisis feed: USD/BDT ${s.rate.toFixed(2)}${s.live ? ' (live)' : ' (offline)'}${s.exposure ? ` · ${money(s.atRisk)} at risk on a 3% move` : ''}` }); } catch {} }
-    catch { el.innerHTML = `<p class="ed-empty">Couldn't reach the market feed — Eon will retry. Your last-known rate is used offline.</p>`; }
+    if (_last && (Date.now() - _lastAt) < 60000) { el.innerHTML = view(_last); return; }
+    el.innerHTML = `<p class="ed-empty">Reaching the market feed…</p>`;
+    try {
+      const s = await scan(); _last = s; _lastAt = Date.now(); el.innerHTML = view(s);
+      try { window.EonTrace && window.EonTrace.unshift({ t: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), line: `Crisis feed: USD/BDT ${s.rate.toFixed(2)}${s.live ? ' (live)' : ' (offline)'}${s.exposure ? ` · ${money(s.atRisk)} at risk on a 3% move` : ''}` }); } catch {}
+    } catch { el.innerHTML = `<p class="ed-empty">Couldn't reach the market feed — Eon will retry. Your last-known rate is used offline.</p>`; }
   },
 };
 if (typeof window !== 'undefined') window.EonCrisis = Object.assign(window.EonCrisis || {}, EonCrisis);

@@ -41,9 +41,16 @@ const ownerOK = () => { const b = brain(); try { return !!(b && b.isOwner && b.i
 const _trace = (window.EonTrace = window.EonTrace || []);
 let _traceSig = '';
 function trace(line) {
+  if (_trace[0] && _trace[0].line === line) return;   // skip consecutive duplicates
   const d = new Date();
   _trace.unshift({ t: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), line });
   if (_trace.length > 12) _trace.length = 12;
+}
+/** collapse consecutive duplicate lines for display (other modules push directly). */
+function traceRows() {
+  const out = []; let last = null;
+  for (const t of _trace) { if (t.line !== last) { out.push(t); last = t.line; } }
+  return out.slice(0, 6);
 }
 
 /* ---------------- compute ---------------- */
@@ -280,7 +287,8 @@ function cardCrisis() {
 function card(title, sub, body) { return `<div class="ed-card"><div class="ed-ct">${title}</div><div class="ed-cs">${sub}</div>${body}</div>`; }
 
 function liveSection(m, L) {
-  const rows = _trace.length ? _trace.map((t) => `<div class="tr"><i>${t.t}</i><span>${esc(t.line)}</span></div>`).join('') : `<div class="tr"><span>Warming up the intelligence layer…</span></div>`;
+  const tr = traceRows();
+  const rows = tr.length ? tr.map((t) => `<div class="tr"><i>${t.t}</i><span>${esc(t.line)}</span></div>`).join('') : `<div class="tr"><span>Warming up the intelligence layer…</span></div>`;
   return `<div class="ed-live" id="edLiveBox" style="--k:${L.color}">
     <div class="ed-live-l">
       <div class="sub">Eon · working live</div>
@@ -350,7 +358,7 @@ const EonDeck = {
     const sc = host.querySelector('#edSelf');
     if (sc) sc.onclick = () => { try { window.EonSelfCorrect && window.EonSelfCorrect.open(); } catch {} };
     const cb = host.querySelector('#edCrisisBody');
-    if (cb) { try { window.EonCrisis && window.EonCrisis.render(cb); } catch {} }
+    if (cb && !cb._hydrated) { cb._hydrated = true; try { window.EonCrisis && window.EonCrisis.render(cb); } catch {} }
     const ask = host.querySelector('#edAsk'), askBtn = host.querySelector('#edAskBtn');
     const doAsk = () => {
       const q = (ask && ask.value || '').trim(); if (!q) return;
@@ -371,7 +379,7 @@ const EonDeck = {
     const bar = el.querySelector('.bar > span'); if (bar) bar.style.width = (L.thinking ? pct(L.progress) : 100) + '%';
     // keep the trace fresh (compute() grows it; re-render just the list)
     try { compute(); } catch {}
-    const tl = el.querySelector('.tl'); if (tl && _trace.length) tl.innerHTML = _trace.map((t) => `<div class="tr"><i>${t.t}</i><span>${esc(t.line)}</span></div>`).join('');
+    const tl = el.querySelector('.tl'); const tr = traceRows(); if (tl && tr.length) tl.innerHTML = tr.map((t) => `<div class="tr"><i>${t.t}</i><span>${esc(t.line)}</span></div>`).join('');
   },
   refresh() { this.render(); },
 };
