@@ -17,7 +17,8 @@
      Every result becomes a new pocket, so nothing is lost.
    ============================================================ */
 
-import EonProver from '../analytics/prover.js';   // Any-Dataset Live Prover (replaces the old 🧮 Sum tool)
+import EonProver from '../analytics/prover.js';        // Any-Dataset Live Prover (replaces the old 🧮 Sum tool)
+import EonWorkstation from '../intel/workstation.js';  // Intelligence Workstation (replaces the old 🔤 Sort tool)
 
 const STORE_KEY = 'eon-pockets';
 const MAX_POCKETS = 12;          // not counting pinned
@@ -413,7 +414,7 @@ export class Backpack {
       <div class="ep-tools">
         <button class="et-prove" title="Give EON any spreadsheet — he reads &amp; profiles it live">📊 Prove</button>
         <button class="et-bundle" title="Combine everything into one">🧺 Bundle</button>
-        <button class="et-sort" title="Tidy the bag">🔤 Sort</button>
+        <button class="et-mind" title="Open EON's Intelligence Workstation — KPIs, live analysis &amp; predictions">🧠 Mind</button>
         <button class="et-fetch" title="Fetch records into the bag">📥 Fetch</button>
         <button class="et-note" title="Jot a quick note he'll keep">✏️ Note</button>
         <button class="et-select" title="Pick several to bundle or sum">☑️ Select</button>
@@ -427,7 +428,7 @@ export class Backpack {
     p.querySelector('.ep-close').onclick = (e) => { e.stopPropagation(); this._togglePanel(false); };
     p.querySelector('.et-prove').onclick = (e) => { e.stopPropagation(); this._toolProve(); };
     p.querySelector('.et-bundle').onclick = (e) => { e.stopPropagation(); this._toolBundle(); };
-    p.querySelector('.et-sort').onclick = (e) => { e.stopPropagation(); this._toolSort(); };
+    p.querySelector('.et-mind').onclick = (e) => { e.stopPropagation(); this._toolWorkstation(); };
     p.querySelector('.et-fetch').onclick = (e) => { e.stopPropagation(); this._openFetch(e.currentTarget); };
     p.querySelector('.et-note').onclick = (e) => { e.stopPropagation(); this._toolNote(); };
     p.querySelector('.et-select').onclick = (e) => { e.stopPropagation(); this._toggleSelect(); };
@@ -571,6 +572,17 @@ export class Backpack {
       if (P && P.openOverlay) { P.openOverlay({ onReact }); this._react('📊', 'Drop any spreadsheet on me — I read it live. 📊', 'point'); }
       else this._react('📊', 'The prover is warming up — try again in a second. 📊', 'think');
     } catch { this._react('📊', 'Hmm, could not open the prover. 🤔', 'think'); }
+  }
+  // 🧠 Intelligence Workstation — Eon's portable, self-contained dashboard:
+  // KPIs, live analysis, predictions & the data story over whatever data the
+  // host site exposes (via discovery.js). Opens anywhere the companion runs.
+  _toolWorkstation() {
+    this._togglePanel(false);
+    try {
+      const W = EonWorkstation || (typeof window !== 'undefined' && window.EonWorkstation);
+      if (W && W.open) { W.open(); try { this.ctx.character.playEmote('point'); } catch {} this._sparkle('🧠'); try { this.ctx.ai?.speak('Here\'s everything I know — live. 🧠', 3200); } catch {} }
+      else this._react('🧠', 'The workstation is warming up. 🧠', 'think');
+    } catch { this._react('🧠', 'Could not open the workstation. 🤔', 'think'); }
   }
   _toolSum() {
     const nums = this.pockets.flatMap((p) => this._numbersIn(p.text));

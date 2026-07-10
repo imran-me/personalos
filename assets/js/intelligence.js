@@ -376,6 +376,7 @@
             <div><b>EON Intelligence</b><small>One brain reading everything — live analysis, predictions & impact</small></div>
           </div>
           <span class="ei-badge" id="eiModelBadge">${this._model.trained ? `<i class="bi bi-cpu"></i> model trained · ${this._model.n} outcomes` : `<i class="bi bi-hourglass-split"></i> cold-start prior`}</span>
+          <button class="ei-wsbtn" id="eiOpenWs" title="Open the full Intelligence Workstation"><i class="bi bi-arrows-fullscreen"></i> Workstation</button>
         </div>
 
         <div class="ei-live" id="eiLive">${this._liveHtml()}</div>
@@ -509,6 +510,8 @@
     _bind(host) {
       if (!host) return;
       try {
+        const ws = host.querySelector('#eiOpenWs');
+        if (ws) ws.onclick = () => { try { window.EonWorkstation && window.EonWorkstation.open(); } catch {} };
         const openProver = (opts) => { try { if (window.EonProver && window.EonProver.openOverlay) window.EonProver.openOverlay(opts || {}); } catch {} };
         const btn = host.querySelector('#eiProveBtn');
         if (btn) btn.onclick = () => openProver({ onReact: () => { try { window.EON?.character?.playEmote?.('cheer'); } catch {} setTimeout(() => { try { this.render(); } catch {} }, 400); } });
