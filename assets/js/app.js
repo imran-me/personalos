@@ -1506,6 +1506,10 @@ function emptyState(icon, title, text, btnLabel, onClick, ownerOnly = false) {
    also self-mounts on an interval, so this initializer just nudges it. */
 function initEon() {
   try { window.EonDeck && window.EonDeck.mount(); } catch {}
+  // Native productivity + signal panels (moved here from the dashboard). The
+  // compute pass already ran at boot; just render into this page's containers.
+  try { computeSignals(); renderSignalPanel(); } catch {}
+  try { computeProductivity(); renderRealisticDay(); renderTracksPanel(); renderPulsePanel(); } catch {}
 }
 
 function initDashboard() {
@@ -1618,9 +1622,10 @@ function initDashboard() {
       <td class="date-cell">${o.deadline ? fmtDate(o.deadline) : '—'}</td>
     </tr>`).join('') : `<tr><td colspan="3" class="text-soft text-center py-4">No opportunities yet.</td></tr>`;
 
-  /* signal radar + productivity layer (read-only derived intelligence) */
-  try { computeSignals(); renderSignalPanel(); } catch {}
-  try { computeProductivity(); renderRealisticDay(); renderTracksPanel(); renderPulsePanel(); } catch {}
+  /* signal + productivity layer now lives on the dedicated Eon page (initEon).
+     Still compute here so window.EonSignals/EonProductivity stay fresh for EON. */
+  try { computeSignals(); } catch {}
+  try { computeProductivity(); } catch {}
 
   /* calendar widget + reminder list */
   renderCalendar();

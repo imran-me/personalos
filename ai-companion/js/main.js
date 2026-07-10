@@ -478,8 +478,9 @@ class Eon {
 
     // hide the other chips while EON is away; the ✕ becomes a bring-back 🙂
     this.layer.querySelector('#eon-home-btn').style.display = vis;
-    // owner chips: hide on the way out; their own update() restores them on return
-    [document.getElementById('eon-bag'), document.getElementById('eon-ask-chip')].forEach((el) => { if (el && hidden) el.style.display = 'none'; });
+    // owner chips: hide on the way out, and explicitly restore them on the way
+    // back (don't rely on a subsystem update tick that may lag behind the click).
+    [document.getElementById('eon-bag'), document.getElementById('eon-ask-chip')].forEach((el) => { if (el) el.style.display = hidden ? 'none' : ''; });
     const power = this.layer.querySelector('#eon-power');
     power.textContent = hidden ? '🙂' : '✕';
     power.title = hidden ? 'Bring EON back' : 'Hide EON';
