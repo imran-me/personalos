@@ -250,6 +250,9 @@ function injectStyle() {
   #eon-prover .epv-chip:hover{border-color:#4f46e5;background:#eef0fe}
   #eon-prover .epv-res{margin-top:16px;opacity:0;transform:translateY(6px);transition:.35s}
   #eon-prover .epv-res.in{opacity:1;transform:none}
+  #eon-prover .epv-loading{display:flex;align-items:center;gap:10px;color:#5b6678;font-weight:600;padding:10px 0}
+  #eon-prover .epv-spin{width:16px;height:16px;flex:0 0 auto;border:2px solid #e0e3f0;border-top-color:#4f46e5;border-radius:50%;animation:epvspin .7s linear infinite}
+  @keyframes epvspin{to{transform:rotate(360deg)}}
   #eon-prover .epv-headline{display:flex;align-items:center;gap:11px;background:linear-gradient(120deg,#eef0fe,#e6f6ff);border:1px solid #d9def7;border-radius:13px;padding:13px 15px}
   #eon-prover .epv-headline .hl-ic{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#4f46e5,#0ea5e9);color:#fff;display:grid;place-items:center;font-size:18px;flex:0 0 auto}
   #eon-prover .epv-headline b{font:800 15px "Plus Jakarta Sans"}
@@ -291,9 +294,9 @@ function ensureOverlay() {
       <div class="epv-b">
         <div class="epv-drop" tabindex="0">
           <i class="bi bi-filetype-csv"></i>
-          <p>Drop a CSV/TSV here, or click to choose</p>
-          <small>Nothing leaves your browser — profiling runs 100% locally.</small>
-          <input type="file" accept=".csv,.tsv,.txt,text/csv" hidden>
+          <p>Drop a CSV, Excel, PDF or text file — or click to choose</p>
+          <small>Eon reads it and tells you what it is. Nothing leaves your browser.</small>
+          <input type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm,.pdf,text/csv,application/pdf" hidden>
         </div>
         <div class="epv-samples"><span>Or try</span></div>
         <div class="epv-res"></div>
@@ -326,11 +329,114 @@ function ensureOverlay() {
   return el;
 }
 
-function readFile(file, res, el) {
-  const rd = new FileReader();
-  rd.onload = () => runInput(String(rd.result || ''), file.name.replace(/\.[^.]+$/, ''), res, el);
-  rd.onerror = () => { res.innerHTML = `<p style="color:#d6453d">Couldn't read that file.</p>`; res.classList.add('in'); };
-  rd.readAsText(file);
+async function readFile(file, res, el) {
+  const base = file.name.replace(/\.[^.]+$/, '');
+  const ext = (file.name.match(/\.([a-z0-9]+)$/i) || [])[1] ? file.name.match(/\.([a-z0-9]+)$/i)[1].toLowerCase() : '';
+  res.innerHTML = `<div class="epv-loading"><span class="epv-spin"></span>Reading “${escapeHtmlLocal(file.name)}”…</div>`;
+  res.classList.remove('in'); void res.offsetWidth; res.classList.add('in');
+  try {
+    if (ext === 'xlsx' || ext === 'xls' || ext === 'xlsm') {
+      const rows = await readExcel(file); runRows(rows, base, res, el);
+    } else if (ext === 'pdf') {
+      const text = await readPdf(file); runDocument(text, base, res, el);
+    } else {
+      const text = await file.text();
+      if (looksTabular(text)) runInput(text, base, res, el);
+      else runDocument(text, base, res, el);
+    }
+  } catch (e) {
+    const needsNet = /offline|load|import|network|fetch|worker|dynamically imported/i.test(e && e.message || '');
+    res.innerHTML = `<p style="color:#d6453d">${(needsNet && (ext === 'pdf' || ext === 'xlsx' || ext === 'xls'))
+      ? `Reading ${ext.toUpperCase()} needs an internet connection the first time (Eon loads the parser on demand). Offline? Export to CSV and drop that.`
+      : "Couldn't read that file — try a CSV, Excel, PDF, or text file."}</p>`;
+    res.classList.add('in');
+  }
+}
+
+/* on-demand parsers (loaded from CDN only when actually needed) */
+async function readExcel(file) {
+  const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, { defval: '', raw: false });
+}
+async function readPdf(file) {
+  const pdfjs = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs');
+  try { pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs'; } catch {}
+  const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+  let text = ''; const pages = Math.min(pdf.numPages, 40);
+  for (let i = 1; i <= pages; i++) { const pg = await pdf.getPage(i); const tc = await pg.getTextContent(); text += tc.items.map((t) => t.str).join(' ') + '\n'; }
+  return text;
+}
+/* does this text look like a delimited table, or prose? */
+function looksTabular(text) {
+  const lines = String(text).split(/\r?\n/).filter((l) => l.trim()).slice(0, 12);
+  if (lines.length < 2) return false;
+  const delim = detectDelim(text);
+  const counts = lines.map((l) => l.split(delim).length);
+  const withCols = counts.filter((c) => c >= 2).length;
+  return (counts.reduce((a, b) => a + b, 0) / counts.length) >= 2 && withCols >= lines.length * 0.7;
+}
+function runRows(rows, name, res, el) {
+  let p; try { p = profileDataset(Array.isArray(rows) ? rows : [], name); window.EonProver.last = p; } catch { p = null; }
+  if (!p || !p.rowCount) { res.innerHTML = `<p style="color:#d6453d">That sheet looks empty — is the first row a header?</p>`; res.classList.add('in'); return; }
+  res.innerHTML = renderProfile(p); res.classList.remove('in'); void res.offsetWidth; res.classList.add('in');
+  try { el._opts && el._opts.onReact && el._opts.onReact('celebrate', p); } catch {}
+}
+function runDocument(text, name, res, el) {
+  const doc = analyzeDocument(String(text || ''), name);
+  window.EonProver.last = { name, document: doc, rowCount: 0, domain: { label: doc.label } };
+  res.innerHTML = renderDocument(doc); res.classList.remove('in'); void res.offsetWidth; res.classList.add('in');
+  try { el._opts && el._opts.onReact && el._opts.onReact('celebrate', { rowCount: doc.wc, domain: { label: doc.label } }); } catch {}
+}
+
+/* ---------------- document (prose / PDF) understanding ---------------- */
+const DOC_STOP = new Set('the a an and or of to in on at by with from for is are was were be been being as it this that these those you your i we he she they them his her our their not but if then so than too very can will would should could may might have has had do does did about into over under out up down more most all any each per via at your you'.split(' '));
+export function analyzeDocument(text, name) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  const words = clean ? clean.split(/\s+/) : [];
+  const wc = words.length;
+  const sentences = clean.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 24);
+  const readMin = Math.max(1, Math.round(wc / 200));
+  const moneyMatches = text.match(/[৳$€£]\s?[\d,]+(?:\.\d{1,2})?|\b(?:BDT|USD|Tk|Rs)\.?\s?[\d,]+/gi) || [];
+  const isFinancial = moneyMatches.length >= 3 || /\b(invoice|amount due|balance due|subtotal|grand total|receipt|statement of account|payable)\b/i.test(text);
+  const low = clean.toLowerCase();
+  let kind = 'document', label = 'a document';
+  if (isFinancial) { kind = 'financial'; label = 'a financial document (invoice / statement / receipt)'; }
+  else if (/\b(dear\s+[a-z]|sincerely|kind regards|yours (truly|faithfully|sincerely)|to whom it may concern)\b/i.test(text)) { kind = 'letter'; label = 'a letter'; }
+  else if (/\b(abstract|introduction|methodology|literature review|hypothesis|results|discussion|conclusion|references|bibliography)\b/i.test(low)) { kind = 'report'; label = 'a report / research paper'; }
+  else if (/\b(curriculum vitae|resume|work experience|professional experience|skills|references available|objective)\b/i.test(low)) { kind = 'resume'; label = 'a CV / résumé'; }
+  else if (/\b(agenda|minutes|action items|attendees|meeting)\b/i.test(low)) { kind = 'notes'; label = 'meeting notes / an agenda'; }
+  else if (wc >= 300) { kind = 'essay'; label = 'an essay / article'; }
+  else if (wc > 0) { kind = 'notes'; label = 'a short note'; }
+  else { kind = 'empty'; label = 'an empty or image-only document'; }
+  // topic keywords
+  const freq = {};
+  words.map((w) => w.toLowerCase().replace(/[^a-z]/g, '')).filter((w) => w.length > 4 && !DOC_STOP.has(w)).forEach((w) => (freq[w] = (freq[w] || 0) + 1));
+  const keywords = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 6).map((x) => x[0]);
+  // extractive summary: the opener + the two most keyword-dense sentences
+  const scored = sentences.map((s) => { const sw = s.toLowerCase(); return { s, sc: keywords.reduce((n, k) => n + (sw.includes(k) ? 1 : 0), 0) }; });
+  const keySentences = [...new Set([sentences[0], ...scored.sort((a, b) => b.sc - a.sc).map((x) => x.s)])].filter(Boolean).slice(0, 3);
+  let finance = null;
+  if (isFinancial) { const nums = moneyMatches.map((m) => parseFloat(String(m).replace(/[^0-9.]/g, ''))).filter((n) => !isNaN(n)); if (nums.length) finance = { count: nums.length, total: nums.reduce((a, b) => a + b, 0), max: Math.max(...nums) }; }
+  return { kind, label, wc, readMin, keywords, keySentences, finance, sentences: sentences.length };
+}
+function fmtMoney(n) { try { return typeof window.fmtBDT === 'function' ? window.fmtBDT(Math.round(n)) : '৳' + Math.round(n).toLocaleString(); } catch { return '৳' + Math.round(n); } }
+function renderDocument(doc) {
+  const icon = { financial: 'cash-stack', letter: 'envelope-paper', report: 'file-earmark-text', resume: 'person-badge', essay: 'file-text', notes: 'journal-text', document: 'file-earmark', empty: 'file-earmark-x' }[doc.kind] || 'file-earmark';
+  return `
+    <div class="epv-headline"><span class="hl-ic"><i class="bi bi-${icon}"></i></span>
+      <div><b>This looks like ${escapeHtmlLocal(doc.label)}.</b><small>${doc.wc.toLocaleString()} words · ~${doc.readMin} min read${doc.keywords.length ? ' · about ' + escapeHtmlLocal(doc.keywords.slice(0, 3).join(', ')) : ''}</small></div></div>
+    <div class="epv-stats">
+      <div class="epv-stat"><div class="v">${doc.wc.toLocaleString()}</div><div class="l">words</div></div>
+      <div class="epv-stat"><div class="v">${doc.sentences}</div><div class="l">sentences</div></div>
+      <div class="epv-stat"><div class="v">${doc.readMin}</div><div class="l">min read</div></div>
+      ${doc.finance ? `<div class="epv-stat"><div class="v">${doc.finance.count}</div><div class="l">amounts</div></div>` : `<div class="epv-stat"><div class="v">${doc.keywords.length}</div><div class="l">key terms</div></div>`}
+    </div>
+    ${doc.finance ? `<div class="epv-sec">Money in this document</div><div class="epv-ins"><div><i class="bi bi-dot dot"></i><span>${doc.finance.count} amounts, totaling <b>~${fmtMoney(doc.finance.total)}</b> (largest ${fmtMoney(doc.finance.max)}).</span></div></div>` : ''}
+    <div class="epv-sec">What it's about</div>
+    <div class="epv-ins">${doc.keySentences.length ? doc.keySentences.map((s) => `<div><i class="bi bi-dot dot"></i><span>${escapeHtmlLocal(s.slice(0, 240))}${s.length > 240 ? '…' : ''}</span></div>`).join('') : '<div>Too short to summarise.</div>'}</div>
+    ${doc.keywords.length ? `<div class="epv-sec">Key terms</div><div class="epv-cols">${doc.keywords.map((k) => `<span class="epv-col"><b>${escapeHtmlLocal(k)}</b></span>`).join('')}</div>` : ''}`;
 }
 
 function runInput(text, name, res, el) {
