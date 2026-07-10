@@ -14,6 +14,7 @@
 
 import { CompanionBrain } from './companion-brain.js';
 import '../knowledge/academic.js';   // Eon's academic knowledge base (window.EonAcademic)
+import '../knowledge/brain-qa.js';   // Eon's wide Q&A brain — 340+ offline answers (window.EonBrainQA)
 
 const SYN = {
   opportunities: ['opportunit', 'opps', 'opp'],
@@ -275,6 +276,10 @@ export class AskEon {
     // academic knowledge base — general questions about SOPs, scholarships, tests,
     // extracurriculars, study/career, even when they're not about the user's own data.
     try { const ak = window.EonAcademic && window.EonAcademic.answerAcademic(nq); if (ak) return { speak: ak.speak, detail: ak.detail }; } catch {}
+
+    // the wide Q&A brain — 340+ offline entries (academic, productivity, data-science
+    // concepts, the app itself, small talk), each with 3-5 varied practical answers.
+    try { const bq = window.EonBrainQA && window.EonBrainQA.answerBrain(nq); if (bq) return { speak: bq.speak, detail: bq.detail }; } catch {}
 
     return null;
   }
