@@ -342,8 +342,30 @@ const EonDeck = {
     if (!host) return;
     this._host = host;
     this.render();
+    this._sig = this._dataSig();
     if (this._tick) clearInterval(this._tick);
-    this._tick = setInterval(() => this._refreshLive(), 1000);
+    // EonBrain loads async and only has data after its first meditation cycle (and
+    // owner may sign in after load). Watch the data signature and do a FULL re-render
+    // when it changes — otherwise just refresh the live card. This is what makes the
+    // page fill in on a real session instead of showing an empty/sign-in deck.
+    this._tick = setInterval(() => {
+      try {
+        const sig = this._dataSig();
+        if (sig !== this._sig) { this._sig = sig; this.render(); }
+        else this._refreshLive();
+      } catch {}
+    }, 1200);
+  },
+  _dataSig() {
+    try {
+      const b = brain();
+      const owner = ownerOK() ? 1 : 0;
+      const r = (b && b.getRecords) ? b.getRecords().length : 0;
+      const e = (b && b.getEntities) ? Object.keys(b.getEntities()).length : 0;
+      const s = (() => { try { return (window.EonSignals && window.EonSignals.at) || 0; } catch { return 0; } })();
+      const fin = (() => { try { const F = window.FinanceDB; return (F && F.data && F.data.tx) ? F.data.tx.length : 0; } catch { return 0; } })();
+      return owner + ':' + r + ':' + e + ':' + s + ':' + fin;
+    } catch { return ''; }
   },
   render() {
     const host = this._host || document.getElementById('eonDeck'); if (!host) return;
@@ -393,10 +415,16 @@ const EonDeck = {
     const ask = host.querySelector('#edAsk'), askBtn = host.querySelector('#edAskBtn');
     const doAsk = () => {
       const q = (ask && ask.value || '').trim(); if (!q) return;
-      // a command → the action agent; a decision → the board; else → Ask EON
+      // a command → the action agent; a decision → the board; else → Ask EON (with the text!)
       if (COMMAND_RE.test(q)) { try { window.EonAgent && window.EonAgent.open(q); } catch {} }
       else if (DECISION_RE.test(q)) { try { window.EonBoardroom && window.EonBoardroom.open(q); } catch {} }
-      else { try { const chip = document.getElementById('eon-ask-chip'); if (chip) chip.click(); } catch {} }
+      else {
+        try {
+          const a = window.EonAsk;
+          if (a && a.ask) { if (a._toggle) a._toggle(true); a.ask(q); }               // open panel + run the question
+          else { const chip = document.getElementById('eon-ask-chip'); if (chip) chip.click(); }
+        } catch {}
+      }
       if (ask) ask.value = '';
     };
     if (askBtn) askBtn.onclick = doAsk;
