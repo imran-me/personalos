@@ -26,6 +26,7 @@ import '../intel/selfcorrect.js'; // registers window.EonSelfCorrect (feature c)
 import '../intel/crisis.js';      // registers window.EonCrisis (feature d)
 import '../analytics/graph.js';   // registers window.EonGraph (relationship-graph intelligence)
 import '../analytics/learn.js';   // registers window.EonLearn (adaptive learning loop)
+import '../analytics/finance.js'; // registers window.EonFinance (personal-finance coach)
 import '../intel/agent.js';       // registers window.EonAgent (NL -> action agent, idea #3)
 
 const A = '#4f46e5';        // indigo accent (used sparingly)
@@ -76,6 +77,7 @@ function compute() {
 
   const win = (() => { try { window.EonWinPredictor && window.EonWinPredictor.refresh(); return window.EonWinPredictor.summary(); } catch { return null; } })();
   const leaks = (() => { try { return window.EonAnomaly ? window.EonAnomaly.scan() : null; } catch { return null; } })();
+  const finance = (() => { try { return window.EonFinance ? window.EonFinance.analyze() : null; } catch { return null; } })();
   const impact = (() => { try { return window.EonImpact ? window.EonImpact.refresh() : null; } catch { return null; } })();
 
   // grow the reasoning trace only when the analysis actually changes
@@ -89,7 +91,7 @@ function compute() {
     if (upcoming.length) trace(`Watching ${upcoming.length} deadline${upcoming.length > 1 ? 's' : ''} within 30 days`);
   }
 
-  return { keys, records: recs.length, upcoming: upcoming.length, overdue: overdue.length, radar, eda, primaryKey, entities, win, leaks, impact };
+  return { keys, records: recs.length, upcoming: upcoming.length, overdue: overdue.length, radar, eda, primaryKey, entities, win, leaks, finance, impact };
 }
 
 const PROC = { idle: ['Watching quietly', SL], meditating: ['Studying your data', A], 'reading-section': ['Reading', A], insight: ['Surfaced an insight', AM] };
@@ -166,6 +168,19 @@ function injectStyle() {
   #eonDeck .ed-verify-row .mk.ok{color:${G};font-size:11.5px;font-weight:600}
   #eonDeck .ed-verify-row .mk.no{color:${R};font-size:11.5px;font-weight:600}
   #eonDeck .ed-verify-foot{font-size:11px;color:var(--text-faint);margin-top:9px;line-height:1.45}
+  /* money coach */
+  #eonDeck .ed-money-headline{display:flex;gap:9px;align-items:flex-start;font-size:14px;color:#16203a;line-height:1.5;padding:2px 0 12px;border-bottom:1px dashed var(--line,#e7eaf1);margin-bottom:12px}
+  #eonDeck .ed-money-headline i{font-size:17px;margin-top:1px}
+  #eonDeck .ed-money-headline b{color:#111634}
+  #eonDeck .ed-fcast{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:6px}
+  #eonDeck .ed-fcast>div{background:var(--surface-2,#fbfcfe);border:1px solid var(--line-2,#eef1f6);border-radius:11px;padding:10px 12px}
+  #eonDeck .ed-fcast .v{font:700 18px "JetBrains Mono";display:block;line-height:1.1}
+  #eonDeck .ed-fcast .l{font-size:11px;color:var(--text-soft);font-weight:500}
+  #eonDeck .ed-money-sec{font:700 10.5px "Inter";text-transform:uppercase;letter-spacing:.07em;color:var(--text-faint);margin:16px 0 8px}
+  #eonDeck .ed-tips{display:flex;flex-direction:column;gap:7px}
+  #eonDeck .ed-tip{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:#374151;line-height:1.5;background:linear-gradient(180deg,#f7fbf8,#fff);border:1px solid #e2f0e8;border-radius:10px;padding:9px 12px}
+  #eonDeck .ed-tip i{color:${G};font-size:14px;margin-top:2px;flex:0 0 auto}
+  #eonDeck .ed-tip b{color:#111634}
   /* leaks */
   #eonDeck .ed-leak{display:flex;gap:13px;padding:11px 0;border-bottom:1px solid var(--line-2,#eef1f6)}
   #eonDeck .ed-leak:last-child{border-bottom:0}
@@ -233,15 +248,26 @@ function cardStory(e) {
   const chips = (e.columns || []).slice(0, 10).map((c) => `<span class="ed-chip"><b>${esc(c.name)}</b><i>${c.type}</i></span>`).join('');
   return card('Data story', `${esc(e.name)} · automatic EDA`, `<div class="ed-story">${e.insights.map((s) => `<div>${s}</div>`).join('')}</div><div class="ed-chips">${chips}</div>`);
 }
-function cardMoney(L) {
-  if (!L || !L.hasData) return '';
-  const items = [];
-  if (L.overrun) items.push({ amt: L.overrun.over, c: R, h: 'Over budget', w: `Spent ${money(L.overrun.spend)} of a ${money(L.overrun.budget)} budget.` });
-  (L.flags || []).slice(0, 4).forEach((f) => items.push({ amt: f.amount, c: f.kind === 'duplicate' ? AM : R, h: f.kind === 'duplicate' ? 'Possible duplicate' : (f.zLabel ? f.zLabel + 'σ outlier' : 'Anomaly'), w: f.why }));
-  const rows = items.length ? items.map((it) => `<div class="ed-leak"><span class="amt" style="color:${it.c}">${money(it.amt)}</span><span><b>${esc(it.h)}</b><small>${it.w}</small></span></div>`).join('')
-    : `<p class="ed-empty">Scanned ${L.txCount} transactions — nothing unusual. 🌿</p>`;
-  const sub = L.count ? `${L.count} flag${L.count === 1 ? '' : 's'}${L.recovered ? ' · ' + money(L.recovered) + ' at risk' : ''}` : `${L.txCount} transactions scanned`;
-  return card('Money radar', sub, rows);
+function cardMoney(F, L) {
+  const hasF = F && F.hasData, hasL = L && L.hasData;
+  if (!hasF && !hasL) return '';
+  const fmt = (n) => { try { return typeof window.fmtBDT === 'function' ? window.fmtBDT(Math.round(n)) : '৳' + Math.round(n).toLocaleString(); } catch { return '৳' + Math.round(n); } };
+  // yearly forecast tiles
+  const fc = hasF ? `<div class="ed-fcast">
+    <div><span class="v" style="color:${G}">${fmt(F.yearly.income)}</span><span class="l">income / yr</span></div>
+    <div><span class="v" style="color:#16203a">${fmt(F.yearly.expense)}</span><span class="l">spend / yr</span></div>
+    <div><span class="v" style="color:${F.netM >= 0 ? G : R}">${fmt(Math.abs(F.yearly.net))}</span><span class="l">${F.netM >= 0 ? 'saved' : 'short'} / yr</span></div>
+    ${F.potentialYearly > 0 ? `<div><span class="v" style="color:${A}">${fmt(F.potentialYearly)}</span><span class="l">savable / yr</span></div>` : ''}
+  </div>` : '';
+  const tips = hasF && F.tips.length ? `<div class="ed-money-sec">Where you can save</div><div class="ed-tips">${F.tips.map((t) => `<div class="ed-tip"><i class="bi bi-piggy-bank-fill"></i><span>${t.text}</span></div>`).join('')}</div>` : '';
+  // anomalies as secondary watch-outs
+  const leakItems = [];
+  if (hasL && L.overrun) leakItems.push({ amt: L.overrun.over, c: R, h: 'Over budget', w: `Spent ${fmt(L.overrun.spend)} of a ${fmt(L.overrun.budget)} budget.` });
+  if (hasL) (L.flags || []).slice(0, 3).forEach((f) => leakItems.push({ amt: f.amount, c: f.kind === 'duplicate' ? AM : R, h: f.kind === 'duplicate' ? 'Possible duplicate' : (f.zLabel ? f.zLabel + 'σ outlier' : 'Anomaly'), w: f.why }));
+  const leaks = leakItems.length ? `<div class="ed-money-sec">Watch-outs Eon caught</div>${leakItems.map((it) => `<div class="ed-leak"><span class="amt" style="color:${it.c}">${fmt(it.amt)}</span><span><b>${esc(it.h)}</b><small>${it.w}</small></span></div>`).join('')}` : '';
+  const sub = hasF ? `${F.months} months of your ledger · forecast, savings & watch-outs` : `${L.txCount} transactions scanned`;
+  const body = `${hasF ? `<div class="ed-money-headline"><i class="bi bi-${F.netM >= 0 ? 'graph-up-arrow' : 'graph-down-arrow'}" style="color:${F.netM >= 0 ? G : R}"></i><span>${F.headline}</span></div>` : ''}${fc}${tips}${leaks || (hasF && !tips ? `<p class="ed-empty">Your spending looks clean — nothing to flag. 🌿</p>` : '')}`;
+  return `<div class="ed-card ed-money-card"><div class="ed-ct">Money coach</div><div class="ed-cs">${sub}</div>${body}</div>`;
 }
 function cardImpact(m) {
   if (!m) return '';
@@ -398,7 +424,8 @@ const EonDeck = {
     let m; try { m = compute(); } catch { host.innerHTML = `<div class="ed-card">Warming up…</div>`; return; }
     const L = live();
     // Business section only shows cards that have real content (no empty space).
-    const bizCards = [(m.leaks && m.leaks.hasData) ? cardMoney(m.leaks) : '', cardBoard(), cardTwin(), cardAgent(), cardCrisis(), cardProver()].filter(Boolean);
+    const moneyCoach = ((m.finance && m.finance.hasData) || (m.leaks && m.leaks.hasData)) ? cardMoney(m.finance, m.leaks) : '';
+    const bizCards = [cardBoard(), cardTwin(), cardAgent(), cardCrisis(), cardProver()].filter(Boolean);
     host.innerHTML = `
       <div class="ed-hero">
         <div><h1>Intelligence</h1><p>Everything Eon reads, predicts and decides across your operation — one brain, explained.</p></div>
@@ -415,6 +442,7 @@ const EonDeck = {
 
       <div class="ed-sec">
         <div class="ed-seclabel"><b>Business</b></div>
+        ${moneyCoach ? `<div class="ed-grid" style="margin-bottom:16px">${moneyCoach}</div>` : ''}
         <div class="ed-grid ${bizCards.length >= 3 ? 'ed-3' : bizCards.length === 2 ? 'ed-2' : ''}">${bizCards.join('')}</div>
       </div>
 
