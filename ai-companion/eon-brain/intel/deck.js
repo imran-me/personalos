@@ -23,6 +23,7 @@ import '../analytics/impact.js';
 import '../intel/boardroom.js';   // registers window.EonBoardroom (feature a)
 import '../intel/twin.js';        // registers window.EonTwin (feature b)
 import '../intel/selfcorrect.js'; // registers window.EonSelfCorrect (feature c)
+import '../intel/crisis.js';      // registers window.EonCrisis (feature d)
 
 const A = '#4f46e5';        // indigo accent (used sparingly)
 const G = '#0f9d58', AM = '#c77d0a', R = '#d6453d', SL = '#64748b';
@@ -272,6 +273,9 @@ function cardCalibration() {
 function cardSelfCorrect() {
   return card('Self-correction', 'reflection loop — Eon checks &amp; reweights itself', `<p class="ed-empty">Watch Eon audit its own prediction, catch where it's over-confident against its track record, explain the miss, and <b>reweight itself live</b> — a correction that persists.</p><button class="ed-cardbtn" id="edSelf"><i class="bi bi-arrow-repeat me-1"></i>Run the self-check</button>`);
 }
+function cardCrisis() {
+  return card('Crisis feed', 'live markets fused with your exposure', `<div id="edCrisisBody"><p class="ed-empty">Reaching the market feed…</p></div>`);
+}
 
 function card(title, sub, body) { return `<div class="ed-card"><div class="ed-ct">${title}</div><div class="ed-cs">${sub}</div>${body}</div>`; }
 
@@ -312,7 +316,7 @@ const EonDeck = {
     let m; try { m = compute(); } catch { host.innerHTML = `<div class="ed-card">Warming up…</div>`; return; }
     const L = live();
     // Business section only shows cards that have real content (no empty space).
-    const bizCards = [(m.leaks && m.leaks.hasData) ? cardMoney(m.leaks) : '', cardBoard(), cardTwin(), cardProver()].filter(Boolean);
+    const bizCards = [(m.leaks && m.leaks.hasData) ? cardMoney(m.leaks) : '', cardBoard(), cardTwin(), cardCrisis(), cardProver()].filter(Boolean);
     host.innerHTML = `
       <div class="ed-hero">
         <div><h1>Intelligence</h1><p>Everything Eon reads, predicts and decides across your operation — one brain, explained.</p></div>
@@ -345,6 +349,8 @@ const EonDeck = {
     if (tw) tw.onclick = () => { try { window.EonTwin && window.EonTwin.open(); } catch {} };
     const sc = host.querySelector('#edSelf');
     if (sc) sc.onclick = () => { try { window.EonSelfCorrect && window.EonSelfCorrect.open(); } catch {} };
+    const cb = host.querySelector('#edCrisisBody');
+    if (cb) { try { window.EonCrisis && window.EonCrisis.render(cb); } catch {} }
     const ask = host.querySelector('#edAsk'), askBtn = host.querySelector('#edAskBtn');
     const doAsk = () => {
       const q = (ask && ask.value || '').trim(); if (!q) return;
