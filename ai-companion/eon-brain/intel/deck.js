@@ -242,6 +242,32 @@ function cardTwin() {
 }
 const DECISION_RE = /\b(should i|shall i|do i|is it worth|worth it|better to|hire|fire|buy|invest|expand|launch|borrow|quit|pivot|raise|discount|scale)\b|\?\s*$/i;
 
+function cardCalibration() {
+  let c = null; try { c = window.EonWinPredictor && window.EonWinPredictor.calibration(); } catch {}
+  if (!c || !c.ok) return card('Trust calibration', 'how honest Eon’s predictions are', `<p class="ed-empty">Once you've logged a handful of outcomes, Eon grades its own accuracy here — a reliability curve, not just a claim.</p>`);
+  const W = 200, H = 200, pad = 22;
+  const X = (v) => pad + v * (W - 2 * pad), Y = (v) => H - pad - v * (H - 2 * pad);
+  const dots = c.points.map((p) => `<circle cx="${X(p.pred).toFixed(1)}" cy="${Y(p.actual).toFixed(1)}" r="${(3 + Math.min(6, p.n)).toFixed(1)}" fill="${A}" opacity=".72"/>`).join('');
+  const curve = c.points.length > 1 ? `<polyline points="${c.points.map((p) => X(p.pred).toFixed(1) + ',' + Y(p.actual).toFixed(1)).join(' ')}" fill="none" stroke="${A}" stroke-width="1.5" opacity=".4"/>` : '';
+  return card('Trust calibration', `${c.n} outcomes · Eon grades itself`, `
+    <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+      <svg viewBox="0 0 ${W} ${H}" width="176" height="176" style="flex:0 0 auto">
+        <rect x="${pad}" y="${pad}" width="${W - 2 * pad}" height="${H - 2 * pad}" fill="none" stroke="#eef1f6"/>
+        <line x1="${X(0)}" y1="${Y(0)}" x2="${X(1)}" y2="${Y(1)}" stroke="#c7cbe6" stroke-width="1" stroke-dasharray="4 4"/>
+        ${curve}${dots}
+        <text x="${W / 2}" y="${H - 3}" text-anchor="middle" font-size="9" fill="#9aa3b2" font-family="Inter">predicted →</text>
+        <text x="9" y="${H / 2}" text-anchor="middle" font-size="9" fill="#9aa3b2" font-family="Inter" transform="rotate(-90 9 ${H / 2})">actual →</text>
+      </svg>
+      <div style="flex:1;min-width:150px">
+        <div style="display:flex;gap:20px">
+          <div><div class="ed-num" style="font-size:28px;color:${G}">${Math.round(c.accuracy * 100)}%</div><div style="font-size:11.5px;color:var(--text-soft)">accuracy</div></div>
+          <div><div class="ed-num" style="font-size:28px;color:#16203a">${c.brier.toFixed(2)}</div><div style="font-size:11.5px;color:var(--text-soft)">Brier score</div></div>
+        </div>
+        <p class="ed-empty" style="margin-top:12px">Dots on the dashed line = perfectly calibrated. Expected calibration error <b>${Math.round(c.ece * 100)}%</b>${c.trained ? '' : ' — cold-start, sharpens as you log outcomes'}.</p>
+      </div>
+    </div>`);
+}
+
 function card(title, sub, body) { return `<div class="ed-card"><div class="ed-ct">${title}</div><div class="ed-cs">${sub}</div>${body}</div>`; }
 
 function liveSection(m, L) {
@@ -293,6 +319,7 @@ const EonDeck = {
       <div class="ed-sec">
         <div class="ed-seclabel"><b>Intelligence</b></div>
         <div class="ed-grid ed-2">${cardWin(m.win)}${cardStory(m.eda) || cardProver()}</div>
+        <div class="ed-grid" style="margin-top:16px">${cardCalibration()}</div>
       </div>
 
       <div class="ed-sec">

@@ -157,6 +157,10 @@ const EonWinPredictor = {
     }
     this._model = model;
 
+    // retrospective calibration: what the model says vs what actually happened,
+    // on the decided records — the basis for the honesty / reliability curve.
+    this._calib = decided.map((r) => ({ p: this._predictRow(r, ctx, model).p, y: WIN_RE.test(lc(r[statusField])) ? 1 : 0 }));
+
     // predict the live (non-decided) records
     this._preds = arr.filter((r) => { const v = lc(r[statusField]); return !WIN_RE.test(v) && !LOSS_RE.test(v); })
       .map((r) => ({ id: r[desc.idField] ?? r.id, name: (desc.labelField && r[desc.labelField]) || r.name || r.title || `${entity} #${r[desc.idField] ?? '?'}`, raw: r, ...this._predictRow(r, ctx, model) }))
@@ -186,6 +190,20 @@ const EonWinPredictor = {
   /** predict a single raw record object directly (used site-wide before refresh). */
   predictRecord(raw) { this._fresh(); if (!this._ctx || !this._model) return null; try { return { ...this._predictRow(raw, this._ctx, this._model) }; } catch { return null; } },
   summary() { this._fresh(); const ps = this._preds || []; return { ...(this._info || { ok: false }), live: ps.length, avg: ps.length ? ps.reduce((s, x) => s + x.p, 0) / ps.length : null, top: ps.slice(0, 5) }; },
+  /** reliability analysis: accuracy, Brier score, and a calibration curve
+      (predicted probability vs observed win-rate) over the decided records. */
+  calibration() {
+    this._fresh();
+    const rows = this._calib || [];
+    if (rows.length < 3) return { ok: false, n: rows.length };
+    const nb = 10; const buckets = Array.from({ length: nb }, () => ({ sp: 0, sy: 0, n: 0 }));
+    let correct = 0, brier = 0;
+    rows.forEach(({ p, y }) => { const b = Math.min(nb - 1, Math.max(0, Math.floor(p * nb))); buckets[b].sp += p; buckets[b].sy += y; buckets[b].n++; if ((p >= 0.5 ? 1 : 0) === y) correct++; brier += (p - y) * (p - y); });
+    const points = buckets.filter((b) => b.n > 0).map((b) => ({ pred: b.sp / b.n, actual: b.sy / b.n, n: b.n }));
+    // expected calibration error (weighted |pred-actual|)
+    const ece = points.reduce((s, pt) => s + (pt.n / rows.length) * Math.abs(pt.pred - pt.actual), 0);
+    return { ok: true, n: rows.length, accuracy: correct / rows.length, brier: brier / rows.length, ece, points, trained: this._info ? this._info.trained : false };
+  },
   FEATURES, FLABEL,
 };
 
