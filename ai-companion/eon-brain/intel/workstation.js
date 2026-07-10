@@ -213,7 +213,8 @@ function ensureEl() {
       <div class="ws-body"></div>
     </div>`;
   document.body.appendChild(el);
-  el.addEventListener('click', (e) => { if (e.target === el || e.target.classList.contains('ws-x')) hide(); });
+  el.querySelector('.ws-x').onclick = (e) => { e.stopPropagation(); hide(); };   // direct: card blocks bubbling
+  el.addEventListener('click', (e) => { if (e.target === el) hide(); });           // backdrop
   el.querySelector('.ws-shell').addEventListener('click', (e) => e.stopPropagation());
   el.querySelector('.ws-prove').addEventListener('click', () => { try { window.EonProver && window.EonProver.openOverlay({}); } catch {} });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && el.classList.contains('show')) hide(); });

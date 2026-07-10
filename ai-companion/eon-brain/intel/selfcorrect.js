@@ -77,7 +77,8 @@ function ensureEl() {
   el = document.createElement('div'); el.id = 'eon-sc';
   el.innerHTML = `<div class="sc"><div class="sc-h"><span style="font-size:18px">🔍</span><div><b>Self-Correction</b><small>Eon checks its own work and reweights live</small></div><span class="sc-x">✕</span></div><div class="sc-b"></div></div>`;
   document.body.appendChild(el);
-  el.addEventListener('click', (e) => { if (e.target === el || e.target.classList.contains('sc-x')) el.classList.remove('show'); });
+  el.querySelector('.sc-x').onclick = (e) => { e.stopPropagation(); el.classList.remove('show'); };   // direct: card blocks bubbling
+  el.addEventListener('click', (e) => { if (e.target === el) el.classList.remove('show'); });            // backdrop
   el.querySelector('.sc').addEventListener('click', (e) => e.stopPropagation());
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && el.classList.contains('show')) el.classList.remove('show'); });
   return el;

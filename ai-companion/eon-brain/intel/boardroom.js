@@ -165,7 +165,8 @@ function ensureEl() {
   ['Should I hire 2 more staff?', 'Should I buy new equipment now?', 'Should I expand to a new market?', 'Should I raise my prices?'].forEach((q) => { const b = document.createElement('button'); b.className = 'bd-chip'; b.textContent = q; b.onclick = () => { input.value = q; run(el, q); }; chips.appendChild(b); });
   const go = () => { const q = input.value.trim(); if (q) run(el, q); };
   btn.onclick = go; input.onkeydown = (e) => { if (e.key === 'Enter') go(); };
-  el.addEventListener('click', (e) => { if (e.target === el || e.target.classList.contains('bd-x')) el.classList.remove('show'); });
+  el.querySelector('.bd-x').onclick = (e) => { e.stopPropagation(); el.classList.remove('show'); };   // direct: card blocks bubbling
+  el.addEventListener('click', (e) => { if (e.target === el) el.classList.remove('show'); });            // backdrop
   el.querySelector('.bd').addEventListener('click', (e) => e.stopPropagation());
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && el.classList.contains('show')) el.classList.remove('show'); });
   return el;

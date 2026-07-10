@@ -143,7 +143,8 @@ function ensureEl() {
     <div class="tw-h"><span style="font-size:19px">🔮</span><div><b>Living Business Digital Twin</b><small>Hundreds of simulated futures, fast-forwarded 90 days</small></div><span class="tw-x">✕</span></div>
     <div class="tw-b"></div></div>`;
   document.body.appendChild(el);
-  el.addEventListener('click', (e) => { if (e.target === el || e.target.classList.contains('tw-x')) el.classList.remove('show'); });
+  el.querySelector('.tw-x').onclick = (e) => { e.stopPropagation(); el.classList.remove('show'); };   // direct: card blocks bubbling
+  el.addEventListener('click', (e) => { if (e.target === el) el.classList.remove('show'); });            // backdrop
   el.querySelector('.tw').addEventListener('click', (e) => e.stopPropagation());
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && el.classList.contains('show')) el.classList.remove('show'); });
   return el;

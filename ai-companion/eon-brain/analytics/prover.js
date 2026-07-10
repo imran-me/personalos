@@ -309,7 +309,8 @@ function ensureOverlay() {
     samplesWrap.appendChild(b);
   });
 
-  el.addEventListener('click', (e) => { if (e.target === el || e.target.classList.contains('epv-x')) hide(el); });
+  el.querySelector('.epv-x').onclick = (e) => { e.stopPropagation(); hide(el); };   // direct: card blocks bubbling
+  el.addEventListener('click', (e) => { if (e.target === el) hide(el); });            // backdrop click closes
   card.addEventListener('click', (e) => e.stopPropagation());
   drop.addEventListener('click', () => input.click());
   drop.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.click(); });
