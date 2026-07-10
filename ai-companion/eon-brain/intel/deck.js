@@ -25,6 +25,7 @@ import '../intel/twin.js';        // registers window.EonTwin (feature b)
 import '../intel/selfcorrect.js'; // registers window.EonSelfCorrect (feature c)
 import '../intel/crisis.js';      // registers window.EonCrisis (feature d)
 import '../analytics/graph.js';   // registers window.EonGraph (relationship-graph intelligence)
+import '../analytics/learn.js';   // registers window.EonLearn (adaptive learning loop)
 
 const A = '#4f46e5';        // indigo accent (used sparingly)
 const G = '#0f9d58', AM = '#c77d0a', R = '#d6453d', SL = '#64748b';
@@ -298,6 +299,13 @@ function cardGraph(g) {
   </div>`;
 }
 
+function cardLearn() {
+  let s = null; try { s = window.EonLearn && window.EonLearn.summary(); } catch {}
+  if (!s || !s.ok) return '';
+  const rows = s.rows.slice(0, 5).map((r) => `<div style="display:flex;align-items:center;gap:10px;padding:5px 0"><span style="flex:0 0 108px;font-size:12.5px;color:#16203a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.cat)}</span><span style="flex:1;height:6px;border-radius:3px;background:var(--line,#e7eaf1)"><span style="display:block;height:100%;border-radius:3px;width:${Math.round(r.weight * 100)}%;background:linear-gradient(90deg,${A},#0ea5e9)"></span></span><span class="ed-num" style="font-size:11.5px;color:var(--text-soft);min-width:26px;text-align:right">${Math.round(r.weight * 100)}</span></div>`).join('');
+  return card('Adaptive learning', 'online learning — Eon tunes to your behaviour', `${rows}<p class="ed-empty" style="margin-top:10px">${s.line}</p>`);
+}
+
 function card(title, sub, body) { return `<div class="ed-card"><div class="ed-ct">${title}</div><div class="ed-cs">${sub}</div>${body}</div>`; }
 
 function liveSection(m, L) {
@@ -363,7 +371,7 @@ const EonDeck = {
       <div class="ed-sec">
         <div class="ed-seclabel"><b>Reports</b></div>
         ${m.impact ? `<div class="ed-grid" style="margin-bottom:16px">${cardImpact(m.impact)}</div>` : ''}
-        <div class="ed-grid ed-2">${cardRadar(m.radar, m.overdue)}${cardSources(m.entities, m.records)}</div>
+        ${(() => { const rep = [cardRadar(m.radar, m.overdue), cardSources(m.entities, m.records), cardLearn()].filter(Boolean); return `<div class="ed-grid ${rep.length >= 3 ? 'ed-3' : 'ed-2'}">${rep.join('')}</div>`; })()}
       </div>`;
 
     host.querySelectorAll('#edProve, .ed-provetrigger').forEach((pv) => { pv.onclick = () => { try { window.EonProver && window.EonProver.openOverlay({ onReact: () => setTimeout(() => this.render(), 400) }); } catch {} }; });

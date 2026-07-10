@@ -71,6 +71,8 @@ export class CompanionBrain {
   noteDismiss(entity) {
     if (!entity) return;
     try { const l = this._learn(); l.dismissed = l.dismissed || {}; l.dismissed[entity] = (l.dismissed[entity] || 0) + 1; localStorage.setItem('eon-learn', JSON.stringify(l)); } catch {}
+    // feed the adaptive-learning loop (synced, per-category bandit) too
+    try { window.EonLearn && window.EonLearn.noteDismiss(entity); } catch {}
   }
 
   // ---- planning: an ordered way to tackle what's due (from raw records) ----
