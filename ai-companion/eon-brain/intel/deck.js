@@ -22,6 +22,7 @@ import '../analytics/anomaly.js';
 import '../analytics/impact.js';
 import '../intel/boardroom.js';   // registers window.EonBoardroom (feature a)
 import '../intel/twin.js';        // registers window.EonTwin (feature b)
+import '../intel/selfcorrect.js'; // registers window.EonSelfCorrect (feature c)
 
 const A = '#4f46e5';        // indigo accent (used sparingly)
 const G = '#0f9d58', AM = '#c77d0a', R = '#d6453d', SL = '#64748b';
@@ -268,6 +269,10 @@ function cardCalibration() {
     </div>`);
 }
 
+function cardSelfCorrect() {
+  return card('Self-correction', 'reflection loop — Eon checks &amp; reweights itself', `<p class="ed-empty">Watch Eon audit its own prediction, catch where it's over-confident against its track record, explain the miss, and <b>reweight itself live</b> — a correction that persists.</p><button class="ed-cardbtn" id="edSelf"><i class="bi bi-arrow-repeat me-1"></i>Run the self-check</button>`);
+}
+
 function card(title, sub, body) { return `<div class="ed-card"><div class="ed-ct">${title}</div><div class="ed-cs">${sub}</div>${body}</div>`; }
 
 function liveSection(m, L) {
@@ -319,7 +324,7 @@ const EonDeck = {
       <div class="ed-sec">
         <div class="ed-seclabel"><b>Intelligence</b></div>
         <div class="ed-grid ed-2">${cardWin(m.win)}${cardStory(m.eda) || cardProver()}</div>
-        <div class="ed-grid" style="margin-top:16px">${cardCalibration()}</div>
+        <div class="ed-grid ed-2" style="margin-top:16px">${cardCalibration()}${cardSelfCorrect()}</div>
       </div>
 
       <div class="ed-sec">
@@ -338,6 +343,8 @@ const EonDeck = {
     if (bd) bd.onclick = () => { try { window.EonBoardroom && window.EonBoardroom.open(); } catch {} };
     const tw = host.querySelector('#edTwin');
     if (tw) tw.onclick = () => { try { window.EonTwin && window.EonTwin.open(); } catch {} };
+    const sc = host.querySelector('#edSelf');
+    if (sc) sc.onclick = () => { try { window.EonSelfCorrect && window.EonSelfCorrect.open(); } catch {} };
     const ask = host.querySelector('#edAsk'), askBtn = host.querySelector('#edAskBtn');
     const doAsk = () => {
       const q = (ask && ask.value || '').trim(); if (!q) return;

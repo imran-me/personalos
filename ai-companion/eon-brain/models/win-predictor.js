@@ -110,6 +110,7 @@ const EonWinPredictor = {
   _model: null, _ctx: null, _preds: null, _at: 0, _info: null,
 
   refresh() {
+    try { this._shrink = ((window.EonBrain && window.EonBrain.getStore && window.EonBrain.getStore('winCalib')) || {}).shrink || 0; } catch { this._shrink = 0; }
     const det = detect();
     if (!det) { this._info = { ok: false, reason: 'no pipeline' }; this._preds = []; return this; }
     const { arr, statusField, catField, prioField, effortField, effortIsArr, desc, entity } = det;
@@ -173,9 +174,13 @@ const EonWinPredictor = {
   _predictRow(r, ctx, model) {
     const x = ctx.feat(r);
     const contrib = x.map((xi, k) => xi * model.w[k]);
-    const p = sigmoid(contrib.reduce((s, c) => s + c, model.b));
+    let p = sigmoid(contrib.reduce((s, c) => s + c, model.b));
+    // self-correction: a learned shrinkage toward the base rate, set by the
+    // reflection loop (selfcorrect.js) when it catches the model over-confident.
+    const shrink = this._shrink || 0;
+    if (shrink) p = clamp01((ctx.base ?? 0.4) + (p - (ctx.base ?? 0.4)) * (1 - shrink));
     const ranked = FEATURES.map((f, k) => ({ f, label: FLABEL[f], v: contrib[k] })).sort((a, b) => b.v - a.v);
-    return { p, contrib, ranked, coldStart: !model.trained };
+    return { p, contrib, ranked, coldStart: !model.trained, shrunk: shrink > 0 };
   },
 
   _daysTo(v) { if (v == null || v === '') return null; if (typeof v === 'object' && typeof v.seconds === 'number') v = v.seconds * 1000; const t = typeof v === 'number' ? v : Date.parse(v); return isNaN(t) ? null : Math.floor((t - Date.now()) / 86400000); },
