@@ -22,6 +22,7 @@
 import { profileDataset } from '../analytics/prover.js';
 import '../models/win-predictor.js';   // registers window.EonWinPredictor
 import '../analytics/anomaly.js';       // registers window.EonAnomaly
+import '../analytics/impact.js';        // registers window.EonImpact (synced)
 
 const T = {                      // theme (explicit — portable to any host)
   primary: '#4f46e5', primary700: '#3730a3', accent: '#0ea5e9',
@@ -83,8 +84,10 @@ function compute() {
   const win = (() => { try { window.EonWinPredictor && window.EonWinPredictor.refresh(); return window.EonWinPredictor ? window.EonWinPredictor.summary() : null; } catch { return null; } })();
   // money radar — profit-leak / anomaly detection (portable finance discovery)
   const leaks = (() => { try { return window.EonAnomaly ? window.EonAnomaly.scan() : null; } catch { return null; } })();
+  // quantified impact (synced running maxima)
+  const impact = (() => { try { return window.EonImpact ? window.EonImpact.refresh() : null; } catch { return null; } })();
 
-  return { entityKeys, totalRecords, upcoming: upcoming.length, overdue: overdue.length, health, primaryKey, primary, entities, radar, signals, prod, win, leaks };
+  return { entityKeys, totalRecords, upcoming: upcoming.length, overdue: overdue.length, health, primaryKey, primary, entities, radar, signals, prod, win, leaks, impact };
 }
 
 /* ---------- live process (what Eon is doing) ---------- */
@@ -178,6 +181,12 @@ function injectStyle() {
   #eon-ws .ws-ring::after{content:"";position:absolute;inset:4px;border-radius:50%;background:#fff}
   #eon-ws .ws-ring b{position:relative;z-index:1;font:700 12px "JetBrains Mono";color:#16203a}
   #eon-ws .ws-ring b i{font-size:8px;font-style:normal;color:${T.soft}}
+  #eon-ws .ws-impact{margin-bottom:14px;background:linear-gradient(150deg,#fff,#eef0fe 320%)}
+  #eon-ws .ws-impgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  #eon-ws .ws-imp .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:14px;margin-bottom:5px}
+  #eon-ws .ws-imp .v{font:700 24px "JetBrains Mono",monospace;color:#16203a;line-height:1}
+  #eon-ws .ws-imp .l{font-size:11px;color:${T.soft};font-weight:500;margin-top:2px}
+  @media (max-width:640px){#eon-ws .ws-impgrid{grid-template-columns:repeat(2,1fr)}}
   #eon-ws .ws-money{margin-bottom:14px}
   #eon-ws .ws-leak{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid #eef1f6}
   #eon-ws .ws-leak:first-of-type{border-top:0}
@@ -236,6 +245,7 @@ function body(m) {
     </div>
     <div class="ws-kpis">${kpis.map((k) => `<div class="ws-kpi"><div class="v">${k[1]}</div><div class="l"><i class="bi bi-${k[0]}" style="margin-right:5px;color:${T.primary}"></i>${k[2]}</div></div>`).join('')}</div>
     ${winCard(m.win)}
+    ${impactCard(m.impact)}
     ${moneyCard(m.leaks)}
     <div class="ws-grid">
       <div class="ws-card">
@@ -270,6 +280,21 @@ function winCard(w) {
       ${avg != null ? `<div class="ws-winhero"><div class="v">${avg}<span>%</span></div><div class="l">avg live win-probability<br><small>${w.live} open · scored on 6 engineered features${w.base != null ? ' · ' + Math.round(w.base * 100) + '% base rate' : ''}</small></div></div>` : ''}
       <div class="ws-ops">${rows}</div>
     </div>
+  </div>`;
+}
+
+function impactCard(m) {
+  if (!m) return '';
+  const money = (n) => { try { return typeof window.fmtBDTk === 'function' ? window.fmtBDTk(n) : (typeof window.fmtBDT === 'function' ? window.fmtBDT(n) : '৳' + Math.round(n)); } catch { return '৳' + Math.round(n); } };
+  const cells = [
+    ['shield-check', m.guarded, 'deadlines guarded', T.green],
+    ['broadcast', m.surfaced, 'opportunities surfaced', T.accent],
+    ['hourglass-split', m.hours, 'hours saved', T.violet],
+    ['cash-coin', m.money ? money(m.money) : m.leaksFlagged, m.money ? 'leaks flagged' : 'leaks watched', T.amber],
+  ];
+  return `<div class="ws-card ws-impact">
+    <div class="ws-ch"><i class="bi bi-patch-check"></i>Impact so far<span class="tag">since ${escapeH(m.since)} · synced</span></div>
+    <div class="ws-impgrid">${cells.map((c) => `<div class="ws-imp"><span class="ic" style="background:${c[3]}1a;color:${c[3]}"><i class="bi bi-${c[0]}"></i></span><div class="v">${typeof c[1] === 'number' ? c[1] : c[1]}</div><div class="l">${c[2]}</div></div>`).join('')}</div>
   </div>`;
 }
 

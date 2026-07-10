@@ -27,6 +27,7 @@ export class Brain {
     this._statuses = {};     // dedupKey -> { status, snoozeUntil }
     this._reminders = [];    // manual reminders
     this._memory = {};
+    this._store = {};        // generic synced key-value store (impact, learning, prefs)
     this._busy = false;
     this._records = [];      // flattened records from the last read (owner only)
     this._data = {};         // raw entity arrays from the last read
@@ -197,6 +198,7 @@ export class Brain {
         this._statuses = b.statuses || {};
         this._reminders = b.reminders || [];
         this._memory = b.memory || {};
+        this._store = b.store || {};
         // A brain saved by an older version may carry a stale "deadline"
         // insight for a non-deadline item (e.g. an achievement). Drop it;
         // the owner's next cycle (forced by the version bump) recomputes.
@@ -222,7 +224,7 @@ export class Brain {
     try {
       await this._brainRef().set({
         state: this.state, alerts: this.feed, statuses: this._statuses,
-        reminders: this._reminders, memory: this._memory, updatedAt: nowIso(),
+        reminders: this._reminders, memory: this._memory, store: this._store, updatedAt: nowIso(),
       }, { merge: true });
     } catch (e) { console.warn('[EON brain] persist failed:', e); }
   }
@@ -239,6 +241,29 @@ export class Brain {
   getRecords() { return this._records || []; }
   getData() { return this._data || {}; }
   getEntities() { return this._entities || {}; }
+
+  // ---- generic synced key-value store (Firestore-backed, owner-writes) ----
+  // Any feature's persistent state (impact counters, adaptive-learning stats,
+  // prefs) lives here so it SYNCS across devices via the eon-brain/brain doc.
+  // Reads work for everyone (viewers see the owner's synced numbers); writes
+  // are owner-only. Values must be JSON-serialisable.
+  getStore(key) { const s = this._store || {}; return key ? s[key] : s; }
+  async setStore(key, val) {
+    if (!this.isOwner()) return false;
+    try {
+      await this._loadStore();                 // reconcile with the latest remote first
+      this._store = this._store || {};
+      this._store[key] = val;
+      await this._persist();
+      return true;
+    } catch (e) { console.warn('[EON brain] setStore failed:', e); return false; }
+  }
+  /** shallow-merge a patch into store[key] (handy for counters/objects). */
+  async mergeStore(key, patch) {
+    const cur = this.getStore(key);
+    const base = (cur && typeof cur === 'object') ? cur : {};
+    return this.setStore(key, Object.assign({}, base, patch || {}));
+  }
 
   /** Ensure the dataset is loaded for lookups, without the full meditation cycle. */
   async ensureData() {
