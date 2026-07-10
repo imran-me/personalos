@@ -5047,16 +5047,30 @@ const PAGE_INIT = {
 document.addEventListener('DOMContentLoaded', async () => {
   const page = document.body.dataset.page;
 
-  /* SECURITY BOOTSTRAP — must run before anything renders.
-     1) resolve the Firebase auth state (owner or visitor),
-     2) bounce visitors away from owner-only pages,
-     3) paint instantly from cache, then load the authoritative
-        cloud copy, render, and apply owner/viewer UI gating. */
+  /* SPEED-FIRST BOOTSTRAP —
+     1) paint IMMEDIATELY from the local cache (no network wait) in
+        viewer-safe mode, so navigation feels instant on every visit;
+     2) resolve Firebase auth + fetch the authoritative cloud copy in
+        the background, then re-render ONLY if something changed.
+     Protected pages still wait for auth before showing anything. */
+  const isProtected = Security.PROTECTED_PAGES.includes(page);
+  let paintedEarly = false;
+  if (!isProtected) {
+    try {
+      DB.loadLocal();                    // instant first paint from cache
+      renderActivePage(page);            // viewer-safe: applyMode() upgrades after auth
+      renderFooter();
+      paintedEarly = true;
+    } catch (e) { console.warn('Early paint failed — falling back to full boot.', e); }
+  }
+
   await Security.init();
   if (!Security.requireOwner(page)) return; // redirected to login → stop
 
-  DB.loadLocal();        // instant first paint from the local cache
-  await DB.loadCloud();  // then the shared cloud copy (source of truth)
+  if (!DB.data) DB.loadLocal();
+  const beforeCloud = paintedEarly ? JSON.stringify(DB.data) : null;
+  await DB.loadCloud();  // the shared cloud copy (source of truth)
+  const cloudChanged = paintedEarly && JSON.stringify(DB.data) !== beforeCloud;
 
   // Expose the data layers to EON's portable analytics modules (win-predictor,
   // anomaly, workstation). They prefer window.EonBrain's discovered data, but on
@@ -5067,7 +5081,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (Security.isOwner() && (ensureOppBaseline() | ensureTaskBaseline())) DB.save();   // seed event-stream baselines
   try { computeSignals(); } catch {}         // opportunity Signal Layer
   try { computeProductivity(); } catch {}    // productivity Signal Layer
-  renderActivePage(page);
+  // Re-render only when needed: protected pages always (first render), early-painted
+  // pages only if the cloud copy actually differed from the cache (or the owner just
+  // signed in, which changes the visible controls anyway via applyMode below).
+  if (!paintedEarly || cloudChanged) renderActivePage(page);
   try { maybeWeeklyRetro(); } catch {}       // weekly retrospective (once a week)
   startReminderWatcher();                // owner-only: fire reminders when due
   loadLanguageData();                    // load spelling library + wordlist (async)
