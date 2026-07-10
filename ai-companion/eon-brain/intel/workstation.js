@@ -21,6 +21,7 @@
 
 import { profileDataset } from '../analytics/prover.js';
 import '../models/win-predictor.js';   // registers window.EonWinPredictor
+import '../analytics/anomaly.js';       // registers window.EonAnomaly
 
 const T = {                      // theme (explicit — portable to any host)
   primary: '#4f46e5', primary700: '#3730a3', accent: '#0ea5e9',
@@ -80,8 +81,10 @@ function compute() {
   const prod = (() => { try { return window.EonProductivity && window.EonProductivity.enabled ? window.EonProductivity : null; } catch { return null; } })();
   // win-probability model (portable — detects its own pipeline entity)
   const win = (() => { try { window.EonWinPredictor && window.EonWinPredictor.refresh(); return window.EonWinPredictor ? window.EonWinPredictor.summary() : null; } catch { return null; } })();
+  // money radar — profit-leak / anomaly detection (portable finance discovery)
+  const leaks = (() => { try { return window.EonAnomaly ? window.EonAnomaly.scan() : null; } catch { return null; } })();
 
-  return { entityKeys, totalRecords, upcoming: upcoming.length, overdue: overdue.length, health, primaryKey, primary, entities, radar, signals, prod, win };
+  return { entityKeys, totalRecords, upcoming: upcoming.length, overdue: overdue.length, health, primaryKey, primary, entities, radar, signals, prod, win, leaks };
 }
 
 /* ---------- live process (what Eon is doing) ---------- */
@@ -175,6 +178,12 @@ function injectStyle() {
   #eon-ws .ws-ring::after{content:"";position:absolute;inset:4px;border-radius:50%;background:#fff}
   #eon-ws .ws-ring b{position:relative;z-index:1;font:700 12px "JetBrains Mono";color:#16203a}
   #eon-ws .ws-ring b i{font-size:8px;font-style:normal;color:${T.soft}}
+  #eon-ws .ws-money{margin-bottom:14px}
+  #eon-ws .ws-leak{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid #eef1f6}
+  #eon-ws .ws-leak:first-of-type{border-top:0}
+  #eon-ws .ws-leak .amt{font:700 15px "JetBrains Mono";flex:0 0 auto;min-width:70px}
+  #eon-ws .ws-leak .why b{display:block;font-size:12px;color:#16203a}
+  #eon-ws .ws-leak .why small{color:${T.soft};font-size:11.5px;line-height:1.35;display:block}
   @media (max-width:820px){#eon-ws .ws-grid,#eon-ws .ws-winbody{grid-template-columns:1fr}#eon-ws .ws-winhero{border-right:0;border-bottom:1px dashed ${T.line};padding:0 0 10px}#eon-ws .ws-shell{inset:0;border-radius:0}}`;
   document.head.appendChild(s);
 }
@@ -227,6 +236,7 @@ function body(m) {
     </div>
     <div class="ws-kpis">${kpis.map((k) => `<div class="ws-kpi"><div class="v">${k[1]}</div><div class="l"><i class="bi bi-${k[0]}" style="margin-right:5px;color:${T.primary}"></i>${k[2]}</div></div>`).join('')}</div>
     ${winCard(m.win)}
+    ${moneyCard(m.leaks)}
     <div class="ws-grid">
       <div class="ws-card">
         <div class="ws-ch"><i class="bi bi-bar-chart-line"></i>Data story${m.primaryKey ? `<span class="tag">${escapeH(m.primaryKey)} · auto-EDA</span>` : ''}</div>
@@ -260,6 +270,20 @@ function winCard(w) {
       ${avg != null ? `<div class="ws-winhero"><div class="v">${avg}<span>%</span></div><div class="l">avg live win-probability<br><small>${w.live} open · scored on 6 engineered features${w.base != null ? ' · ' + Math.round(w.base * 100) + '% base rate' : ''}</small></div></div>` : ''}
       <div class="ws-ops">${rows}</div>
     </div>
+  </div>`;
+}
+
+function moneyCard(L) {
+  if (!L || !L.hasData) return '';
+  const money = (n) => { try { return typeof window.fmtBDT === 'function' ? window.fmtBDT(n) : '৳' + Math.round(Math.abs(n)).toLocaleString(); } catch { return '৳' + Math.round(Math.abs(n)); } };
+  const items = [];
+  if (L.overrun) items.push({ amt: L.overrun.over, tone: T.red, head: 'Over budget', why: `Spent ${money(L.overrun.spend)} of a ${money(L.overrun.budget)} monthly budget.` });
+  (L.flags || []).slice(0, 4).forEach((f) => items.push({ amt: f.amount, tone: f.kind === 'duplicate' ? T.amber : T.red, head: f.kind === 'duplicate' ? 'Duplicate?' : (f.zLabel ? f.zLabel + 'σ outlier' : 'Anomaly'), why: f.why }));
+  const rows = items.length ? items.map((it) => `<div class="ws-leak"><span class="amt" style="color:${it.tone}">${money(it.amt)}</span><span class="why"><b>${escapeH(it.head)}</b><small>${it.why}</small></span></div>`).join('')
+    : `<p class="ws-empty">Scanned ${L.txCount} transactions — nothing unusual. Your spending looks clean. 🌿</p>`;
+  return `<div class="ws-card ws-money">
+    <div class="ws-ch"><i class="bi bi-cash-stack"></i>Money radar<span class="tag">${L.count ? L.count + ' flag' + (L.count === 1 ? '' : 's') + (L.recovered ? ' · ' + money(L.recovered) + ' at risk' : '') : L.txCount + ' scanned'}</span></div>
+    ${rows}
   </div>`;
 }
 

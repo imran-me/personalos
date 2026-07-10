@@ -5036,6 +5036,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   DB.loadLocal();        // instant first paint from the local cache
   await DB.loadCloud();  // then the shared cloud copy (source of truth)
 
+  // Expose the data layers to EON's portable analytics modules (win-predictor,
+  // anomaly, workstation). They prefer window.EonBrain's discovered data, but on
+  // this site the private finance ledger lives outside it — so hand it over.
+  try { window.FinanceDB = FinanceDB; window.DB = DB; } catch {}
+
   if (normalizeReminders()) DB.save();   // migrate legacy reminder records
   if (Security.isOwner() && (ensureOppBaseline() | ensureTaskBaseline())) DB.save();   // seed event-stream baselines
   try { computeSignals(); } catch {}         // opportunity Signal Layer

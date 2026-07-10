@@ -19,6 +19,7 @@
 
 import EonProver from '../analytics/prover.js';        // Any-Dataset Live Prover (replaces the old 🧮 Sum tool)
 import EonWorkstation from '../intel/workstation.js';  // Intelligence Workstation (replaces the old 🔤 Sort tool)
+import EonAnomaly from '../analytics/anomaly.js';      // Profit-Leak / Anomaly detector (replaces the old 🧺 Bundle tool)
 
 const STORE_KEY = 'eon-pockets';
 const MAX_POCKETS = 12;          // not counting pinned
@@ -413,7 +414,7 @@ export class Backpack {
       <div class="ep-h">🎒 Backpack <span class="ep-clear">Clear</span><span class="ep-close" title="Close">✕</span></div>
       <div class="ep-tools">
         <button class="et-prove" title="Give EON any spreadsheet — he reads &amp; profiles it live">📊 Prove</button>
-        <button class="et-bundle" title="Combine everything into one">🧺 Bundle</button>
+        <button class="et-money" title="Scan your finances for leaks — outliers, duplicates &amp; overruns">💰 Money</button>
         <button class="et-mind" title="Open EON's Intelligence Workstation — KPIs, live analysis &amp; predictions">🧠 Mind</button>
         <button class="et-fetch" title="Fetch records into the bag">📥 Fetch</button>
         <button class="et-note" title="Jot a quick note he'll keep">✏️ Note</button>
@@ -427,7 +428,7 @@ export class Backpack {
     p.querySelector('.ep-clear').onclick = (e) => { e.stopPropagation(); this._clear(); };
     p.querySelector('.ep-close').onclick = (e) => { e.stopPropagation(); this._togglePanel(false); };
     p.querySelector('.et-prove').onclick = (e) => { e.stopPropagation(); this._toolProve(); };
-    p.querySelector('.et-bundle').onclick = (e) => { e.stopPropagation(); this._toolBundle(); };
+    p.querySelector('.et-money').onclick = (e) => { e.stopPropagation(); this._toolMoney(); };
     p.querySelector('.et-mind').onclick = (e) => { e.stopPropagation(); this._toolWorkstation(); };
     p.querySelector('.et-fetch').onclick = (e) => { e.stopPropagation(); this._openFetch(e.currentTarget); };
     p.querySelector('.et-note').onclick = (e) => { e.stopPropagation(); this._toolNote(); };
@@ -583,6 +584,22 @@ export class Backpack {
       if (W && W.open) { W.open(); try { this.ctx.character.playEmote('point'); } catch {} this._sparkle('🧠'); try { this.ctx.ai?.speak('Here\'s everything I know — live. 🧠', 3200); } catch {} }
       else this._react('🧠', 'The workstation is warming up. 🧠', 'think');
     } catch { this._react('🧠', 'Could not open the workstation. 🤔', 'think'); }
+  }
+  // 💰 Money radar — statistical profit-leak / anomaly detection over the
+  // finance data (portable: FinanceDB here, a discovered finance entity elsewhere).
+  _toolMoney() {
+    const M = (n) => { try { return window.fmtBDT ? window.fmtBDT(n) : '৳' + Math.round(Math.abs(n)).toLocaleString(); } catch { return '৳' + Math.round(Math.abs(n)); } };
+    try {
+      const A = EonAnomaly || (typeof window !== 'undefined' && window.EonAnomaly);
+      const rep = A && A.scan ? A.scan() : null;
+      if (!rep || !rep.hasData) { this._react('💰', 'No finance data to scan yet — add income & expenses. 💰', 'think'); return; }
+      if (!rep.count) { this._react('💰', `Scanned ${rep.txCount} transactions — all clean. 🌿`, 'cheer'); return; }
+      const esc = (s) => this._esc(String(s));
+      const rows = (rep.flags || []).slice(0, 6).map((f) => `<div style="display:flex;gap:10px;padding:9px 0;border-top:1px solid #eef1f6"><b style="font:700 14px 'JetBrains Mono',monospace;color:${f.kind === 'duplicate' ? '#c77d0a' : '#d6453d'};min-width:74px">${M(f.amount)}</b><span><b style="display:block;font-size:12.5px;color:#16203a">${f.kind === 'duplicate' ? 'Duplicate?' : (f.zLabel ? f.zLabel + 'σ outlier' : 'Anomaly')}</b><small style="color:#5b6678;font-size:12px">${esc(f.why)}</small></span></div>`).join('');
+      const over = rep.overrun ? `<div style="display:flex;gap:10px;padding:9px 0;border-top:1px solid #eef1f6"><b style="font:700 14px 'JetBrains Mono';color:#d6453d;min-width:74px">${M(rep.overrun.over)}</b><span><b style="display:block;font-size:12.5px;color:#16203a">Over budget</b><small style="color:#5b6678;font-size:12px">Spent ${M(rep.overrun.spend)} of a ${M(rep.overrun.budget)} monthly budget.</small></span></div>` : '';
+      this._magnifyHtml(`<div style="font:600 14px system-ui,sans-serif;color:#16203a"><div style="font:800 17px 'Plus Jakarta Sans',system-ui">💰 Money radar</div><div style="color:#5b6678;font-size:13px;margin:3px 0 6px">${rep.count} flag${rep.count > 1 ? 's' : ''}${rep.recovered ? ' · ' + M(rep.recovered) + ' at risk' : ''} across ${rep.txCount} transactions</div>${over}${rows}</div>`);
+      this._react('💰', `I found ${rep.count} money leak${rep.count > 1 ? 's' : ''} — real ${M(rep.recovered || rep.flags[0]?.amount || 0)}. 💰`, 'point');
+    } catch { this._react('💰', 'Could not scan the finances. 🤔', 'think'); }
   }
   _toolSum() {
     const nums = this.pockets.flatMap((p) => this._numbersIn(p.text));
