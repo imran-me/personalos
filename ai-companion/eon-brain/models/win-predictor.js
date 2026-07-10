@@ -164,8 +164,12 @@ const EonWinPredictor = {
     this._model = model;
 
     // retrospective calibration: what the model says vs what actually happened,
-    // on the decided records — the basis for the honesty / reliability curve.
-    this._calib = decided.map((r) => ({ p: this._predictRow(r, ctx, model).p, y: WIN_RE.test(lc(r[statusField])) ? 1 : 0 }));
+    // on the decided records — the basis for the honesty / reliability curve, and
+    // the auditable raw comparison (name · predicted · actual · match).
+    this._calib = decided.map((r) => ({
+      name: (desc.labelField && r[desc.labelField]) || r.name || r.title || `${entity} #${r[desc.idField] ?? '?'}`,
+      status: r[statusField], p: this._predictRow(r, ctx, model).p, y: WIN_RE.test(lc(r[statusField])) ? 1 : 0,
+    }));
 
     // predict the live (non-decided) records
     this._preds = arr.filter((r) => { const v = lc(r[statusField]); return !WIN_RE.test(v) && !LOSS_RE.test(v); })
@@ -212,7 +216,10 @@ const EonWinPredictor = {
     const points = buckets.filter((b) => b.n > 0).map((b) => ({ pred: b.sp / b.n, actual: b.sy / b.n, n: b.n }));
     // expected calibration error (weighted |pred-actual|)
     const ece = points.reduce((s, pt) => s + (pt.n / rows.length) * Math.abs(pt.pred - pt.actual), 0);
-    return { ok: true, n: rows.length, accuracy: correct / rows.length, brier: brier / rows.length, ece, points, trained: this._info ? this._info.trained : false };
+    // the auditable raw comparison behind the score — every decided record
+    const detail = rows.map((c) => ({ name: c.name, status: c.status, p: c.p, won: c.y === 1, correct: (c.p >= 0.5 ? 1 : 0) === c.y }))
+      .sort((a, b) => b.p - a.p);
+    return { ok: true, n: rows.length, accuracy: correct / rows.length, brier: brier / rows.length, ece, points, detail, trained: this._info ? this._info.trained : false };
   },
   FEATURES, FLABEL,
 };

@@ -152,6 +152,20 @@ function injectStyle() {
   #eonDeck .ed-chip{font-size:11px;border:1px solid var(--line);border-radius:8px;padding:3px 9px;color:var(--text-soft);background:var(--surface-2,#fbfcfe)}
   #eonDeck .ed-chip b{color:#16203a;font-weight:600}
   #eonDeck .ed-chip i{font-style:normal;font-family:"JetBrains Mono";font-size:9px;opacity:.6;margin-left:5px;text-transform:uppercase}
+  /* calibration verification table */
+  #eonDeck .ed-verify-btn{margin-top:12px;border:0;background:none;color:${A};font:600 12px "Inter";cursor:pointer;padding:0}
+  #eonDeck .ed-verify-btn:hover{text-decoration:underline}
+  #eonDeck .ed-verify{margin-top:14px;border-top:1px solid var(--line-2,#eef1f6);padding-top:10px}
+  #eonDeck .ed-verify-hd,#eonDeck .ed-verify-row{display:grid;grid-template-columns:1fr 92px 62px 92px;gap:8px;align-items:center;font-size:12px;padding:7px 0}
+  #eonDeck .ed-verify-hd{font:700 9.5px "Inter";color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em}
+  #eonDeck .ed-verify-row{border-top:1px solid var(--line-2,#eef1f6)}
+  #eonDeck .ed-verify-row .nm{color:#16203a;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #eonDeck .ed-verify-row .pr{font-family:"JetBrains Mono";color:${A};font-weight:700}
+  #eonDeck .ed-verify-row .ac.w{color:${G};font-weight:600}
+  #eonDeck .ed-verify-row .ac.l{color:${R};font-weight:600}
+  #eonDeck .ed-verify-row .mk.ok{color:${G};font-size:11.5px;font-weight:600}
+  #eonDeck .ed-verify-row .mk.no{color:${R};font-size:11.5px;font-weight:600}
+  #eonDeck .ed-verify-foot{font-size:11px;color:var(--text-faint);margin-top:9px;line-height:1.45}
   /* leaks */
   #eonDeck .ed-leak{display:flex;gap:13px;padding:11px 0;border-bottom:1px solid var(--line-2,#eef1f6)}
   #eonDeck .ed-leak:last-child{border-bottom:0}
@@ -280,7 +294,18 @@ function cardCalibration() {
           <div><div class="ed-num" style="font-size:28px;color:#16203a">${c.brier.toFixed(2)}</div><div style="font-size:11.5px;color:var(--text-soft)">Brier score</div></div>
         </div>
         <p class="ed-empty" style="margin-top:12px">Dots on the dashed line = perfectly calibrated. Expected calibration error <b>${Math.round(c.ece * 100)}%</b>${c.trained ? '' : ' — cold-start, sharpens as you log outcomes'}.</p>
+        <button class="ed-verify-btn" id="edCalVerify">Show the ${c.n} comparisons Eon checked ▾</button>
       </div>
+    </div>
+    <div class="ed-verify" id="edCalTable" hidden>
+      <div class="ed-verify-hd"><span>Opportunity</span><span>Eon predicted</span><span>Actually</span><span></span></div>
+      ${(c.detail || []).map((d) => `<div class="ed-verify-row">
+        <span class="nm">${esc(d.name)}</span>
+        <span class="pr">${Math.round(d.p * 100)}%</span>
+        <span class="ac ${d.won ? 'w' : 'l'}">${d.won ? 'Won' : 'Lost'}</span>
+        <span class="mk ${d.correct ? 'ok' : 'no'}">${d.correct ? '✓ matched' : '✗ missed'}</span>
+      </div>`).join('')}
+      <div class="ed-verify-foot">Accuracy = correct calls ÷ ${c.n}. A call is “correct” when a &gt;50% prediction won (or a &lt;50% prediction lost). Recomputed live from your synced outcomes.</div>
     </div>`);
 }
 
@@ -410,6 +435,8 @@ const EonDeck = {
     if (sc) sc.onclick = () => { try { window.EonSelfCorrect && window.EonSelfCorrect.open(); } catch {} };
     const ag = host.querySelector('#edAgent');
     if (ag) ag.onclick = () => { try { window.EonAgent && window.EonAgent.open(); } catch {} };
+    const cv = host.querySelector('#edCalVerify');
+    if (cv) cv.onclick = () => { const t = host.querySelector('#edCalTable'); if (t) { t.hidden = !t.hidden; cv.textContent = cv.textContent.replace(/[▾▴]\s*$/, '').trim() + (t.hidden ? ' ▾' : ' ▴'); } };
     const cb = host.querySelector('#edCrisisBody');
     if (cb && !cb._hydrated) { cb._hydrated = true; try { window.EonCrisis && window.EonCrisis.render(cb); } catch {} }
     const ask = host.querySelector('#edAsk'), askBtn = host.querySelector('#edAskBtn');

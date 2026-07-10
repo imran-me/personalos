@@ -140,15 +140,19 @@ export function profileDataset(rows, name = 'dataset') {
 function guessDomain(cols, columns) {
   const j = cols.join(' ').toLowerCase();
   const has = (re) => re.test(j);
-  if (has(/invoice|billed|paid|client|freelanc/)) return { label: 'invoicing / freelance', ico: 'receipt' };
+  const money = columns.find((c) => c.type === 'number' && c.isMoney);   // a genuine money column
+  // most specific first; generic words like "category" alone must NOT decide the domain
+  if (has(/invoice|billed|payee|freelanc/)) return { label: 'invoicing / freelance', ico: 'receipt' };
   if (has(/patient|appointment|doctor|clinic|diagnos/)) return { label: 'clinic / appointments', ico: 'heart-pulse' };
-  if (has(/product|sku|sale|revenue|order|qty|quantity|price/)) return { label: 'shop / sales', ico: 'cart' };
-  if (has(/student|grade|course|marks|exam|enroll/)) return { label: 'education / students', ico: 'mortarboard' };
-  if (has(/expense|budget|category|spend|txn|transaction/)) return { label: 'finance / expenses', ico: 'cash-stack' };
-  if (has(/lead|deal|pipeline|stage|opportunit/)) return { label: 'sales pipeline / CRM', ico: 'diagram-3' };
-  if (has(/employee|payroll|attendance|hr\b|department/)) return { label: 'HR / people', ico: 'people' };
-  const moneyCol = columns.find((c) => c.isMoney);
-  if (moneyCol) return { label: 'financial records', ico: 'cash-stack' };
+  if (has(/\b(task|todo|to-do|assignee|subtask)\b/) || has(/owedto/) || (has(/\btitle\b/) && has(/\bstatus\b/) && has(/priorit|due|duedate/)))
+    return { label: 'tasks / to-do', ico: 'check2-square' };
+  if (has(/opportunit|scholarship|fellowship|hackathon|application|deadline/) || has(/\b(lead|deal|pipeline|stage)\b/))
+    return { label: 'opportunities / pipeline', ico: 'compass' };
+  if (has(/\b(sku|product|order|qty|quantity)\b/) && money) return { label: 'shop / sales', ico: 'cart' };
+  if (has(/student|grade|course|marks|exam|enroll|gpa|semester/)) return { label: 'education / students', ico: 'mortarboard' };
+  if (has(/employee|payroll|attendance|\bhr\b|department|salary/)) return { label: 'HR / people', ico: 'people' };
+  if (has(/\b(expense|budget|spend|spent|txn|transaction|payment|debit|credit|invoice)\b/) || money)
+    return { label: 'finance / expenses', ico: 'cash-stack' };
   return { label: 'general records', ico: 'table' };
 }
 
