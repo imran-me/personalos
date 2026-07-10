@@ -858,7 +858,8 @@ function renderFooter() {
 const NAV = [
   { group: 'Overview', items: [
     { page: 'dashboard', href: 'dashboard.html', icon: 'grid-1x2-fill', label: 'Dashboard' },
-    { page: 'accounts',  href: 'accounts.html',  icon: 'wallet-fill', label: 'Accounts', ownerOnly: true }
+    { page: 'accounts',  href: 'accounts.html',  icon: 'wallet-fill', label: 'Accounts', ownerOnly: true },
+    { page: 'eon',       href: 'eon.html',        icon: 'cpu-fill', label: 'Eon Intelligence', ownerOnly: true }
   ]},
   { group: 'Manage', items: [
     { page: 'opportunities', href: 'opportunities.html', icon: 'compass-fill', label: 'Opportunities', countOf: 'opportunities' },
@@ -1500,6 +1501,13 @@ function emptyState(icon, title, text, btnLabel, onClick, ownerOnly = false) {
    ========================================================== */
 
 /* ---------- DASHBOARD ---------- */
+/* The dedicated Eon Intelligence page. The deck itself is a portable module
+   (ai-companion/eon-brain/intel/deck.js) that renders inline into #eonDeck and
+   also self-mounts on an interval, so this initializer just nudges it. */
+function initEon() {
+  try { window.EonDeck && window.EonDeck.mount(); } catch {}
+}
+
 function initDashboard() {
   const opps = DB.getAll('opportunities');
   const tasks = DB.getAll('tasks');
@@ -1619,12 +1627,6 @@ function initDashboard() {
   renderReminderList();
   const addRemBtn = document.getElementById('addReminderBtn');
   if (addRemBtn) addRemBtn.onclick = () => openReminderModal(null);
-
-  /* EON Intelligence Center — the data-science hub under the KPIs
-     (win-probability, auto-EDA, money radar, next-best-action, impact,
-     live process). Additive + owner-gated; guarded so it can never break
-     the dashboard. Defined in assets/js/intelligence.js. */
-  try { window.EonIntel && window.EonIntel.render(); } catch {}
 }
 
 /* ---------- CALENDAR (dashboard widget) ---------- */
@@ -5005,6 +5007,7 @@ function setupPortfolioReveal() {
 const PAGE_INIT = {
   dashboard: initDashboard,
   accounts: initAccounts,
+  eon: initEon,
   opportunities: initOpportunities,
   'opportunity-details': initOpportunityDetails,
   tasks: initTasks,
@@ -5088,6 +5091,7 @@ function renderActivePage(page) {
     const titles = {
       dashboard: ['Dashboard', 'Your opportunities, deadlines and tasks at a glance'],
       accounts: ['Accounts', 'Private income, expense & savings intelligence — owner only'],
+      eon: ['Eon Intelligence', 'Your AI co-worker — live analysis, predictions, decisions and impact'],
       opportunities: ['Opportunities', 'Track every scholarship, fellowship and competition'],
       'opportunity-details': ['Opportunity', 'Full record and application timeline'],
       tasks: ['Task Board', 'Drag tasks across stages to update status'],
