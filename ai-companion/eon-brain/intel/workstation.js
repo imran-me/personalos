@@ -20,6 +20,7 @@
    ============================================================ */
 
 import { profileDataset } from '../analytics/prover.js';
+import '../models/win-predictor.js';   // registers window.EonWinPredictor
 
 const T = {                      // theme (explicit — portable to any host)
   primary: '#4f46e5', primary700: '#3730a3', accent: '#0ea5e9',
@@ -77,8 +78,10 @@ function compute() {
   // fold in richer host signals if present (OppTrack)
   const signals = (() => { try { return window.EonSignals && window.EonSignals.enabled ? window.EonSignals : null; } catch { return null; } })();
   const prod = (() => { try { return window.EonProductivity && window.EonProductivity.enabled ? window.EonProductivity : null; } catch { return null; } })();
+  // win-probability model (portable — detects its own pipeline entity)
+  const win = (() => { try { window.EonWinPredictor && window.EonWinPredictor.refresh(); return window.EonWinPredictor ? window.EonWinPredictor.summary() : null; } catch { return null; } })();
 
-  return { entityKeys, totalRecords, upcoming: upcoming.length, overdue: overdue.length, health, primaryKey, primary, entities, radar, signals, prod };
+  return { entityKeys, totalRecords, upcoming: upcoming.length, overdue: overdue.length, health, primaryKey, primary, entities, radar, signals, prod, win };
 }
 
 /* ---------- live process (what Eon is doing) ---------- */
@@ -158,7 +161,21 @@ function injectStyle() {
   #eon-ws .ws-ent b{font-size:13px;text-transform:capitalize;display:block}
   #eon-ws .ws-ent small{color:${T.soft};font-size:11px}
   #eon-ws .ws-empty{color:${T.soft};font-size:13px}
-  @media (max-width:820px){#eon-ws .ws-grid{grid-template-columns:1fr}#eon-ws .ws-shell{inset:0;border-radius:0}}`;
+  #eon-ws .ws-wincard{margin-bottom:14px}
+  #eon-ws .ws-winbody{display:grid;grid-template-columns:minmax(180px,1fr) 1.4fr;gap:16px;align-items:center}
+  #eon-ws .ws-winhero{display:flex;align-items:center;gap:12px;border-right:1px dashed ${T.line};padding-right:12px}
+  #eon-ws .ws-winhero .v{font:700 42px "JetBrains Mono",monospace;color:${T.primary};line-height:1}
+  #eon-ws .ws-winhero .v span{font-size:20px;color:${T.accent}}
+  #eon-ws .ws-winhero .l{font-size:12.5px;color:#16203a;font-weight:600;line-height:1.35}
+  #eon-ws .ws-winhero .l small{color:${T.soft};font-weight:500;font-size:11px}
+  #eon-ws .ws-ops{display:flex;flex-direction:column;gap:7px}
+  #eon-ws .ws-oprow{display:flex;align-items:center;gap:11px}
+  #eon-ws .ws-ring{--p:0;--k:${T.primary};width:40px;height:40px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;position:relative;
+    background:conic-gradient(var(--k) calc(var(--p)*1%),${T.line} 0)}
+  #eon-ws .ws-ring::after{content:"";position:absolute;inset:4px;border-radius:50%;background:#fff}
+  #eon-ws .ws-ring b{position:relative;z-index:1;font:700 12px "JetBrains Mono";color:#16203a}
+  #eon-ws .ws-ring b i{font-size:8px;font-style:normal;color:${T.soft}}
+  @media (max-width:820px){#eon-ws .ws-grid,#eon-ws .ws-winbody{grid-template-columns:1fr}#eon-ws .ws-winhero{border-right:0;border-bottom:1px dashed ${T.line};padding:0 0 10px}#eon-ws .ws-shell{inset:0;border-radius:0}}`;
   document.head.appendChild(s);
 }
 
@@ -209,6 +226,7 @@ function body(m) {
       </div>
     </div>
     <div class="ws-kpis">${kpis.map((k) => `<div class="ws-kpi"><div class="v">${k[1]}</div><div class="l"><i class="bi bi-${k[0]}" style="margin-right:5px;color:${T.primary}"></i>${k[2]}</div></div>`).join('')}</div>
+    ${winCard(m.win)}
     <div class="ws-grid">
       <div class="ws-card">
         <div class="ws-ch"><i class="bi bi-bar-chart-line"></i>Data story${m.primaryKey ? `<span class="tag">${escapeH(m.primaryKey)} · auto-EDA</span>` : ''}</div>
@@ -223,6 +241,26 @@ function body(m) {
         ${m.entities.map((e) => `<div class="ws-ent"><span class="n">${e.count}</span><span style="flex:1;min-width:0"><b>${escapeH(e.key)}</b><small>${e.fields} fields${e.deadline ? ' · has deadlines' : ''}${e.dateFields.length ? ' · ' + e.dateFields.length + ' date field' + (e.dateFields.length > 1 ? 's' : '') : ''}</small></span></div>`).join('')}
       </div>
     </div>`;
+}
+
+function winCard(w) {
+  if (!w || !w.ok || !w.top || !w.top.length) return '';
+  const avg = w.avg != null ? Math.round(w.avg * 100) : null;
+  const rows = w.top.slice(0, 4).map((p) => {
+    const pc = Math.round(p.p * 100);
+    const tone = pc >= 66 ? T.green : pc >= 40 ? T.amber : T.red;
+    const why = (p.ranked || []).filter((r) => r.v > 0).slice(0, 2).map((r) => r.label).join(', ');
+    return `<div class="ws-oprow"><span class="ws-ring" style="--p:${pc};--k:${tone}"><b>${pc}<i>%</i></b></span>
+      <span style="flex:1;min-width:0"><b style="display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeH(p.name)}</b>
+      <small style="color:${T.soft};font-size:11.5px">${why ? 'lifted by ' + escapeH(why) : 'live'}</small></span></div>`;
+  }).join('');
+  return `<div class="ws-card ws-wincard">
+    <div class="ws-ch"><i class="bi bi-graph-up-arrow"></i>Win probability<span class="tag">${w.trained ? 'logistic · trained · ' + w.n + ' outcomes' : 'logistic · cold-start prior'}</span></div>
+    <div class="ws-winbody">
+      ${avg != null ? `<div class="ws-winhero"><div class="v">${avg}<span>%</span></div><div class="l">avg live win-probability<br><small>${w.live} open · scored on 6 engineered features${w.base != null ? ' · ' + Math.round(w.base * 100) + '% base rate' : ''}</small></div></div>` : ''}
+      <div class="ws-ops">${rows}</div>
+    </div>
+  </div>`;
 }
 
 let _tick = null;
