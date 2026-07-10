@@ -174,6 +174,13 @@ function ensureEl() {
 
 function run(el, decision) {
   const body = el.querySelector('.bd-body');
+  try { runInner(el, body, decision); }
+  catch (e) {
+    // never fail silently — show what went wrong (usually a stale cached module)
+    body.innerHTML = `<div style="color:#d6453d;font-size:13px;padding:10px 2px">The board hit a snag: ${esc((e && e.message) || 'unknown error')}.<br><span style="color:#5b6678">Try a hard refresh (Ctrl+Shift+R) — an older cached version of Eon may still be loaded.</span></div>`;
+  }
+}
+function runInner(el, body, decision) {
   const x = context();
   const board = advisors(decision, x);
   const verdict = synthesize(board);

@@ -27,11 +27,14 @@ const SYN = {
 };
 const AMOUNT_HINTS = ['amount', 'value', 'price', 'cost', 'fee', 'total', 'budget', 'salary', 'paid'];
 // Honest, creative fallbacks when a message isn't in the rule-based library yet.
+// (A practical, data-grounded digest is always attached — see _fallback().)
 const FALLBACKS = [
-  "I don't have that one in my library yet — I'm a rule-based brain that's still growing 🌱. Try “what's due?”, “which opportunity should I focus on?”, or “where can I save money?”",
-  "That's beyond what I can compute offline right now (a full language model is on my roadmap). But I'm great with your data — ask me about deadlines, win-probability, money or your network.",
-  "Hmm, I can't answer that yet — my language side is still learning. I shine on your real data though: try “overdue”, “my win rate”, or “plan my week”.",
-  "Not in my playbook yet 🙂. I get smarter as I grow — for now, ask me about your opportunities, deadlines, finances or impact.",
+  "I don't have that exact one in my library yet — I'm a growing brain 🌱. But here's what I can tell you right now:",
+  "That's beyond my offline playbook (a full language model is on my roadmap). Practically, though — here's where you stand:",
+  "Hmm, my language side is still learning that one. What I *do* know cold is your data — right now:",
+  "Not in my library yet 🙂 — I get smarter as I grow. Meanwhile, the practical picture:",
+  "I can't parse that one yet, but I never come empty-handed — here's your live snapshot:",
+  "New one for me — noted for my training list 📚. In the meantime, practically:",
 ];
 
 export class AskEon {
@@ -76,7 +79,36 @@ export class AskEon {
 
   /** Public: answer a question and RETURN the result (for inline UIs like the deck),
       without touching the floating chip's DOM. */
-  async answer(q) { try { return await this._answer(String(q || '')); } catch { return { speak: this._pick(FALLBACKS) }; } }
+  async answer(q) { try { return await this._answer(String(q || '')); } catch { return this._fallback(q); } }
+
+  /** Never come empty-handed: honest line + a PRACTICAL, live digest — closest
+      matching records for the question, next deadline, best bet, money headline. */
+  _fallback(q) {
+    const detail = [];
+    const DONE = /done|complete|closed|won|lost|accept|reject|success|approved|paid|submitted|finished|archiv|cancel|withdraw|missed/i;
+    try {  // closest records by token overlap — practical even off-library
+      const toks = String(q || '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4);
+      if (toks.length) {
+        const recs = window.EonBrain?.getRecords?.() || [];
+        const hits = recs.map((r) => ({ r, s: toks.reduce((n, t) => n + ((r.label || '').toLowerCase().includes(t) ? 1 : 0), 0) }))
+          .filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 3);
+        if (hits.length) detail.push(...hits.map((h) => `• Closest in your data: ${h.r.label}${h.r.deadlineAt ? ' — ' + this._date(h.r.deadlineAt) : ''}`));
+      }
+    } catch {}
+    try {  // live snapshot
+      const recs = window.EonBrain?.getRecords?.() || [];
+      const now = Date.now();
+      const open = recs.filter((r) => r.deadlineAt && !Number.isNaN(Date.parse(r.deadlineAt)) && !DONE.test(String(r.payload?.status || r.payload?.stage || '')));
+      const next = open.filter((r) => Date.parse(r.deadlineAt) >= now).sort((a, b) => Date.parse(a.deadlineAt) - Date.parse(b.deadlineAt))[0];
+      if (next) detail.push(`• Next deadline: ${next.label} — ${this._date(next.deadlineAt)}`);
+      const od = open.filter((r) => Date.parse(r.deadlineAt) < now).length;
+      if (od) detail.push(`• ${od} overdue ${od > 1 ? 'items need' : 'item needs'} attention`);
+    } catch {}
+    try { const w = window.EonWinPredictor?.summary?.(); if (w && w.ok && w.top && w.top[0]) detail.push(`• Best bet right now: ${w.top[0].name} (${Math.round(w.top[0].p * 100)}% win)`); } catch {}
+    try { const f = window.EonFinance?.analyze?.(); if (f && f.hasData) detail.push(`• ${String(f.headline).replace(/<[^>]+>/g, '')}`); } catch {}
+    if (!detail.length) detail.push('• Ask me: “what’s due?”, “what should I focus on?”, “where can I save money?”');
+    return { speak: this._pick(FALLBACKS), detail };
+  }
 
   async _answer(q) {
     const B = window.EonBrain;
@@ -166,8 +198,8 @@ export class AskEon {
       }
     }
     if (ent) return this._list(recs.slice(0, 10), `${recs.length} ${ent}`);
-    // creative fallback — honest about being a growing, offline brain
-    return { speak: this._pick(FALLBACKS), detail: ['• “what’s due this week?”  • “which opportunity should I focus on?”', '• “where can I save money?”  • “how am I doing?”  • “plan my week”'] };
+    // creative + PRACTICAL fallback — honest line, then a live grounded digest
+    return this._fallback(q);
   }
 
   _pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -194,17 +226,17 @@ export class AskEon {
     const strip = (s) => String(s).replace(/<[^>]+>/g, '');
 
     if (/^(hi+|hey+|hello+|yo+|hola|salam|assalam|assalamualaikum|good\s*(morning|afternoon|evening)|morning|evening|sup|howdy|namaste|greetings)\b/.test(nq) || /^what'?s\s*up\b/.test(nq))
-      return { speak: pick([`Hey${hi}! ${this._miniDigest()} What do you want to tackle?`, `Hi${hi} 👋 ${this._miniDigest()} Ask me about your deadlines, opportunities, money or focus.`, `Hello${hi}! ${this._miniDigest()} I'm all ears.`, `Yo${hi} — ${this._miniDigest()} Where do we start?`]) };
+      return { speak: pick([`Hey${hi}! ${this._miniDigest()} What do you want to tackle?`, `Hi${hi} 👋 ${this._miniDigest()} Ask me about your deadlines, opportunities, money or focus.`, `Hello${hi}! ${this._miniDigest()} I'm all ears.`, `Yo${hi} — ${this._miniDigest()} Where do we start?`, `Salam${hi}! ${this._miniDigest()} Say the word and I'll dig in.`, `Hey hey${hi} 🙌 ${this._miniDigest()} What's on your mind?`]) };
 
     if (/how are (you|u)\b|how'?s it going|you (ok|good|alright)|how do you feel/.test(nq))
-      return { speak: pick([`Running smooth and watching your data 🌿 ${this._miniDigest()}`, `Sharp — just re-read everything. ${this._miniDigest()}`, `Good! Quietly crunching your numbers. ${this._miniDigest()}`]) };
+      return { speak: pick([`Running smooth and watching your data 🌿 ${this._miniDigest()}`, `Sharp — just re-read everything. ${this._miniDigest()}`, `Good! Quietly crunching your numbers. ${this._miniDigest()}`, `Fully charged ⚡ ${this._miniDigest()} How are YOU holding up?`, `Never better — your data keeps me busy. ${this._miniDigest()}`]) };
 
     if (/what can you do|help me\b|how do you work|what do you do|your (features|abilities|skills)|commands|who are you|what are you|how can you help/.test(nq))
-      return { speak: pick(["I'm Eon — your data co-worker. A few things I can do:", "Plenty! I read your whole operation. For example:", "I'm your AI co-worker. Try any of these:"]), detail: ['• “what’s due this week?” · “overdue” · “next deadline”', '• “which opportunity should I focus on?” (win-probability)', '• “where can I save money?” (finance coach)', '• “how am I doing?” · “my win rate”', '• “who should I ask for a reference?”', '• “plan my Chevening application” (I create reminders)', '• “what’s my impact so far?”'] };
+      return { speak: pick(["I'm Eon — your data co-worker. A few things I can do:", "Plenty! I read your whole operation. For example:", "I'm your AI co-worker. Try any of these:", "Think of me as a colleague who never sleeps. Some favourites:", "I read, predict, and act on your data. Ask me things like:"]), detail: ['• “what’s due this week?” · “overdue” · “next deadline”', '• “what should I focus on?” (win-probability)', '• “where can I save money?” (finance coach)', '• “how am I doing?” · “my win rate”', '• “who should I ask for a reference?”', '• “plan my Chevening application” (I create reminders)', '• “what’s my impact so far?”'] };
 
-    if (/\bwin\b|chanc|\bodds\b|likel|worth (my|the) time|which.*(focus|apply|prioriti|pick|choose|first)|best bet|most likely|should i apply|what.*focus/.test(nq)) {
-      try { window.EonWinPredictor?.refresh(); const w = window.EonWinPredictor?.summary(); if (w && w.ok && w.top && w.top.length) { const t = w.top[0]; return { speak: pick([`Focus on “${t.name}” — I put it at ${Math.round(t.p * 100)}%.`, `Highest odds: “${t.name}” (${Math.round(t.p * 100)}%). Spend today there.`, `“${t.name}” is your best bet at ${Math.round(t.p * 100)}%.`]), detail: w.top.slice(0, 4).map((x) => `• ${x.name} — ${Math.round(x.p * 100)}% win`) }; } } catch {}
-      return { speak: "Log a few opportunity outcomes and I'll predict which are worth your time." };
+    if (/\bwin\b|chanc|\bodds\b|likel|worth (my|the) time|which.*(focus|apply|prioriti|pick|choose|first)|best bet|most likely|should i apply|what.*focus|focus on|priorit/.test(nq)) {
+      try { window.EonWinPredictor?.refresh(); const w = window.EonWinPredictor?.summary(); if (w && w.ok && w.top && w.top.length) { const t = w.top[0]; const p = Math.round(t.p * 100); return { speak: pick([`Focus on “${t.name}” — I put it at ${p}%.`, `Highest odds: “${t.name}” (${p}%). Spend today there.`, `“${t.name}” is your best bet at ${p}%.`, `If I had one hour of your time, I'd spend it on “${t.name}” — ${p}% win odds.`, `The math says “${t.name}” (${p}%). The rest can wait.`]), detail: w.top.slice(0, 4).map((x) => `• ${x.name} — ${Math.round(x.p * 100)}% win`) }; } } catch {}
+      return this._fallback(nq);
     }
 
     if (/money|financ|spend|budget|\bleak|afford|\bcash\b|expens|save|saving|cut cost|overspend|where.*money|how much.*(spend|save)/.test(nq)) {
@@ -218,7 +250,7 @@ export class AskEon {
         const WON = /won|accept|complete|approv|award|admit|success/i, LOST = /lost|reject|declin|withdraw|miss|irrelevant/i;
         const decided = opps.filter((o) => WON.test(o.status || '') || LOST.test(o.status || ''));
         const wins = decided.filter((o) => WON.test(o.status || ''));
-        if (decided.length) return { speak: pick([`You're at a ${Math.round(wins.length / decided.length * 100)}% win rate — ${wins.length} of ${decided.length} decided.`, `Track record: ${wins.length}/${decided.length} won (${Math.round(wins.length / decided.length * 100)}%). ${this._miniDigest()}`]) };
+        if (decided.length) { const pc = Math.round(wins.length / decided.length * 100); return { speak: pick([`You're at a ${pc}% win rate — ${wins.length} of ${decided.length} decided.`, `Track record: ${wins.length}/${decided.length} won (${pc}%). ${this._miniDigest()}`, `${wins.length} wins out of ${decided.length} decided — that's ${pc}%. ${pc >= 50 ? 'Strong.' : 'Every loss is training data.'}`, `Scoreboard: ${pc}% conversion (${wins.length}W/${decided.length - wins.length}L). ${this._miniDigest()}`, `Your hit rate is ${pc}%. ${pc >= 40 ? 'Better than most pipelines I read.' : 'Focus on fewer, better-fit bets and this climbs.'}`]) }; }
       } catch {}
       return { speak: `Here's where things stand — ${this._miniDigest()}` };
     }
@@ -232,7 +264,7 @@ export class AskEon {
     }
 
     if (/motivat|encourag|stress|tired|overwhelm|give up|can'?t do|too hard|struggl|anxious|burn.?out|demotivat|feeling low|exhaust/.test(nq))
-      return { speak: pick([`One step at a time${hi}. Pick the smallest next thing and just start — momentum does the rest. 💪`, `You've got this${hi}. Look how much you're already on top of. Do one small thing now.`, `Deep breath${hi}. I'll hold the deadlines; you take the next single move. 🌿`, `Progress beats perfection${hi}. Ship the 10-minute version and build from there.`]) };
+      return { speak: pick([`One step at a time${hi}. Pick the smallest next thing and just start — momentum does the rest. 💪`, `You've got this${hi}. Look how much you're already on top of. Do one small thing now.`, `Deep breath${hi}. I'll hold the deadlines; you take the next single move. 🌿`, `Progress beats perfection${hi}. Ship the 10-minute version and build from there.`, `Tired is data, not defeat${hi}. Rest tonight, and tomorrow we take the smallest win first.`, `Remember why you started${hi} — and let me carry the remembering-what's-due part. You just do the next step.`]) };
 
     if (/\b(thank|thx|thanks|cheers|appreciate|great job|nice one|awesome|good (job|bot|work)|love (it|you)|well done|helpful)\b/.test(nq))
       return { speak: pick(['Anytime 🙌', "Happy to help — that's the job.", 'You got it. 💙', 'My pleasure — keep the questions coming.', '🙌 Always here.']) };

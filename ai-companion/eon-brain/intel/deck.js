@@ -307,7 +307,10 @@ function cardAgent() {
   return card('Action agent', 'tell Eon what to do — it plans, you approve, it writes', `<p class="ed-empty">“Plan my Chevening application and remind me every Sunday.” Eon turns a messy instruction into a dated plan and — on your approval — writes the reminders to your synced brain. Advisory-first.</p><button class="ed-cardbtn" id="edAgent"><i class="bi bi-robot me-1"></i>Give Eon a task</button>`);
 }
 const COMMAND_RE = /\b(plan|prepare|prep|remind|create|build|organi[sz]e|set ?up|schedule|draft me|make me|apply)\b/i;
-const DECISION_RE = /\b(should i|shall i|do i|is it worth|worth it|better to|hire|fire|buy|invest|expand|launch|borrow|quit|pivot|raise|discount|scale)\b|\?\s*$/i;
+// The boardroom is for true YES/NO business decisions only ("should I hire…?").
+// Questions like "what should I focus on?" are Ask-Eon questions and must be
+// answered INLINE — so require a decision opener + a business-action verb.
+const DECISION_RE = /(?:\b(?:should|shall|do|dare)\s+i\b|\bis it worth\b|\bworth it\b|\bbetter to\b)[^?]*\b(hire|fire|recruit|staff|buy|purchase|invest|equipment|expand|launch|open|scale|borrow|loan|debt|quit|drop|cancel|shut|close|pivot|raise (?:my )?price|discount|outsource|partner|franchise)\b|\bconvene\b|\bboard meeting\b/i;
 
 function cardCalibration() {
   let c = null; try { c = window.EonWinPredictor && window.EonWinPredictor.calibration(); } catch {}
@@ -432,8 +435,19 @@ const EonDeck = {
   },
   render() {
     const host = this._host || document.getElementById('eonDeck'); if (!host) return;
-    if (!ownerOK()) { host.innerHTML = `<div class="ed-card" style="text-align:center;padding:44px">Sign in as the owner to see Eon's intelligence.</div>`; return; }
-    let m; try { m = compute(); } catch { host.innerHTML = `<div class="ed-card">Warming up…</div>`; return; }
+    if (!ownerOK()) {
+      // keep the adopted native panels alive across the wipe (e.g. sign-out → sign-in)
+      let nat = null; try { nat = host.querySelector('.eon-native'); if (nat) nat.parentElement.removeChild(nat); } catch {}
+      host.innerHTML = `<div class="ed-card" style="text-align:center;padding:44px">Sign in as the owner to see Eon's intelligence.</div>`;
+      if (nat) host.appendChild(nat);
+      return;
+    }
+    // Preserve the host site's native panels (Signal radar / Realistic day / Tracks /
+    // Pulse): detach BEFORE we wipe innerHTML so the node survives re-renders, then
+    // re-adopt it into the slot right after the prover.
+    let native = null;
+    try { native = document.querySelector('.eon-native'); if (native && native.parentElement) native.parentElement.removeChild(native); } catch {}
+    let m; try { m = compute(); } catch { host.innerHTML = `<div class="ed-card">Warming up…</div>`; if (native) host.appendChild(native); return; }
     const L = live();
     // Business section only shows cards that have real content (no empty space).
     const moneyCoach = ((m.finance && m.finance.hasData) || (m.leaks && m.leaks.hasData)) ? cardMoney(m.finance, m.leaks) : '';
@@ -446,6 +460,10 @@ const EonDeck = {
       ${liveSection(m, L)}
       ${askBar()}
       <div class="ed-sec"><div class="ed-grid">${cardProver()}</div></div>
+
+      <!-- host site's native panels (Signal radar / Realistic day / Tracks / Pulse)
+           are adopted into this slot after each render — see the adopt logic below -->
+      <div id="edNativeSlot" class="ed-sec"></div>
 
       <div class="ed-sec">
         <div class="ed-seclabel"><b>Intelligence</b></div>
@@ -466,6 +484,9 @@ const EonDeck = {
         ${m.impact ? `<div class="ed-grid" style="margin-bottom:16px">${cardImpact(m.impact)}</div>` : ''}
         ${(() => { const rep = [cardRadar(m.radar, m.overdue), cardSources(m.entities, m.records), cardLearn()].filter(Boolean); return `<div class="ed-grid ${rep.length >= 3 ? 'ed-3' : 'ed-2'}">${rep.join('')}</div>`; })()}
       </div>`;
+
+    // adopt the native panels into their slot (right after the prover)
+    try { const slot = host.querySelector('#edNativeSlot'); if (native && slot) slot.appendChild(native); } catch {}
 
     host.querySelectorAll('#edProve, .ed-provetrigger').forEach((pv) => { pv.onclick = () => { try { window.EonProver && window.EonProver.openOverlay({ onReact: () => setTimeout(() => this.render(), 400) }); } catch {} }; });
     const bd = host.querySelector('#edBoard');
