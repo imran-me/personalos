@@ -267,7 +267,14 @@ function acadRenderSchedule() {
 function acadRenderCourses() {
   const host = document.getElementById('acadCourses'); if (!host) return;
   const courses = DB.getAll('courses');
-  if (!courses.length) { host.innerHTML = `<p class="text-soft mb-0" style="font-size:13px">No courses yet — add your first course to unlock the schedule, attendance and assignments.</p>`; return; }
+  if (!courses.length) {
+    host.innerHTML = `<div style="text-align:center;padding:18px 10px">
+      <p class="text-soft mb-2" style="font-size:13px">No courses yet — add your first course, or load a ready starter pack<br>(your DIU CIS info + real faculty + sample courses, attendance, tests &amp; assignments — everything editable).</p>
+      <button class="btn btn-primary btn-sm owner-only" id="acadStarterBtn"><i class="bi bi-magic me-1"></i>Load my starter data</button>
+    </div>`;
+    const sb = document.getElementById('acadStarterBtn'); if (sb) sb.onclick = acadLoadStarter;
+    return;
+  }
   const ordered = [...courses].sort((a, b) => (a.status === 'Ongoing' ? -1 : 1) - (b.status === 'Ongoing' ? -1 : 1) || String(a.code).localeCompare(String(b.code)));
   host.innerHTML = ordered.map(c => {
     const label = courseLabel(c);
@@ -529,6 +536,85 @@ function acadSendMail(id) {
   toast(`Email drafted to ${email} — attach the PDF and send.`, 'ok');
   acadRedraw();
 }
+
+/* ---------- starter pack: Imran @ DIU CIS + living sample data ----------
+   Real identity + real CIS faculty (public roster); representative courses,
+   ~4 weeks of attendance, logged results and live assignments — so every
+   Academic feature (and EON's academic brain) has true-shaped data from
+   minute one. Owner-clicked; dates are relative to today so it stays alive. */
+function acadStarterData() {
+  const day = (d, h = 0) => { const x = new Date(); x.setDate(x.getDate() + d); return x.toISOString().slice(0, 10); };
+  const OOP = 'CIS 352 — Object Oriented Programming (Java)';
+  const DBMS = 'CIS 344 — Database Management Systems';
+  const SAD = 'CIS 331 — System Analysis & Design';
+  const MIS = 'CIS 361 — Management Information Systems';
+  const WEB = 'CIS 355 — Web Technologies Lab';
+  const att = [];
+  // ~4 weeks of history: SAD & DBMS solid, MIS one late, OOP ends with a 2-absence run
+  const addAtt = (course, offsets, statuses) => offsets.forEach((o, i) => att.push({ course, date: day(o), status: statuses[i] || 'Present' }));
+  addAtt(SAD, [-24, -22, -17, -15, -10, -8, -3, -1], []);
+  addAtt(DBMS, [-23, -21, -16, -14, -9, -7, -2], []);
+  addAtt(MIS, [-23, -21, -16, -14, -9, -7, -2], ['Present', 'Present', 'Late', 'Present', 'Present', 'Present', 'Present']);
+  addAtt(OOP, [-24, -22, -17, -15, -10, -8, -3, -1], ['Present', 'Present', 'Present', 'Present', 'Present', 'Present', 'Absent', 'Absent']);
+  addAtt(WEB, [-19, -12, -5], []);
+  return {
+    programme: [{ degree: 'B.Sc. in Computing and Information System (CIS)', department: 'Computing and Information System (CIS)', institution: 'Daffodil International University', batch: '232', section: 'A', rollId: '232-16-53', currentSemester: 9, totalSemesters: 12, creditsCompleted: 98, totalCredits: 140, cgpa: 3.42, cgpaTarget: 3.75, advisor: 'Md. Sarwar Hossain Mollah', startDate: '2023-05-02', expectedGraduation: '2027-04-30' }],
+    faculty: [
+      { name: 'Md. Sarwar Hossain Mollah', designation: 'Associate Professor', department: 'CIS', courses: 'Head of the Department', officeHours: 'Sun & Tue 14:00-16:00', preferredContact: 'Email' },
+      { name: 'Mohammad Azam Khan', designation: 'Associate Professor', department: 'CIS', courses: 'CIS 344', preferredContact: 'Email' },
+      { name: 'Md. Biplob Hossain', designation: 'Assistant Professor', department: 'CIS', courses: 'CIS 331', preferredContact: 'Email' },
+      { name: 'Md. Nasimul Kader', designation: 'Assistant Professor', department: 'CIS', preferredContact: 'Email' },
+      { name: 'Md. Mehedi Hassan', designation: 'Lecturer', department: 'CIS', courses: 'CIS 352', preferredContact: 'Email' },
+      { name: 'Md. Faruk Hosen', designation: 'Lecturer', department: 'CIS', courses: 'CIS 355', preferredContact: 'Email' },
+      { name: 'Sonia Nasrin', designation: 'Lecturer', department: 'CIS', courses: 'CIS 361', preferredContact: 'Email' },
+      { name: 'Tamanna Akter', designation: 'Lecturer', department: 'CIS', preferredContact: 'Email' },
+    ],
+    courses: [
+      { code: 'CIS 331', title: 'System Analysis & Design', credit: 3, semester: '9', teacher: 'Md. Biplob Hossain', section: 'A', room: 'AB4-503', classDays: 'Sun 10:00-11:30; Tue 10:00-11:30', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 24, courseType: 'Theory', difficulty: 'Moderate', color: 'Indigo', syllabusTopics: ['requirements analysis', 'dfd', 'use case', 'uml', 'feasibility study'] },
+      { code: 'CIS 344', title: 'Database Management Systems', credit: 3, semester: '9', teacher: 'Mohammad Azam Khan', section: 'A', room: 'AB4-402', classDays: 'Mon 11:40-13:10; Wed 11:40-13:10', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 24, courseType: 'Theory', difficulty: 'Moderate', color: 'Green', syllabusTopics: ['er model', 'sql', 'normalization', 'transactions', 'indexing'] },
+      { code: 'CIS 352', title: 'Object Oriented Programming (Java)', credit: 3, semester: '9', teacher: 'Md. Mehedi Hassan', section: 'A', room: 'AB4-401', classDays: 'Sun 14:00-15:30; Tue 14:00-15:30', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 24, courseType: 'Theory + Lab', difficulty: 'Hard', color: 'Red', syllabusTopics: ['classes and objects', 'inheritance', 'polymorphism', 'interfaces', 'exception handling'] },
+      { code: 'CIS 361', title: 'Management Information Systems', credit: 3, semester: '9', teacher: 'Sonia Nasrin', section: 'A', room: 'AB4-505', classDays: 'Mon 08:30-10:00; Wed 08:30-10:00', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 24, courseType: 'Theory', difficulty: 'Easy', color: 'Sky', syllabusTopics: ['decision support systems', 'erp', 'business processes', 'it strategy'] },
+      { code: 'CIS 355', title: 'Web Technologies Lab', credit: 1.5, semester: '9', teacher: 'Md. Faruk Hosen', section: 'A', room: 'Lab-3', classDays: 'Thu 14:00-16:00 (Lab-3)', status: 'Ongoing', attendanceThreshold: 75, totalPlannedClasses: 12, courseType: 'Lab', difficulty: 'Moderate', color: 'Violet', syllabusTopics: ['html css', 'javascript', 'php basics', 'rest apis'] },
+      { code: 'CIS 221', title: 'Structured Programming', credit: 3, semester: '5', teacher: 'Md. Nasimul Kader', status: 'Completed', finalGrade: 'C+', gradePoint: 2.5, courseType: 'Theory', difficulty: 'Hard', color: 'Amber', syllabusTopics: ['loops', 'functions', 'arrays', 'pointers', 'recursion'] },
+      { code: 'CIS 111', title: 'Fundamentals of Computing', credit: 3, semester: '1', status: 'Completed', finalGrade: 'A-', gradePoint: 3.5, courseType: 'Theory', color: 'Slate' },
+    ],
+    attendance: att,
+    assessments: [
+      // OOP — the declining pattern EON should catch
+      { course: OOP, type: 'Class Test', title: 'CT 1 — Classes & Objects', date: day(-21), topics: ['classes and objects'], weight: 10, totalMarks: 20, obtainedMarks: 15, classAverage: 13, preparedness: '4 — Well prepared', status: 'Done' },
+      { course: OOP, type: 'Quiz', title: 'Quiz 1 — Inheritance', date: day(-12), topics: ['inheritance'], weight: 5, totalMarks: 20, obtainedMarks: 12, classAverage: 12.5, preparedness: '3 — Okay', status: 'Done', difficultyFelt: '4 — Hard' },
+      { course: OOP, type: 'Quiz', title: 'Quiz 2 — Polymorphism', date: day(-4), topics: ['polymorphism'], weight: 5, totalMarks: 20, obtainedMarks: 9, classAverage: 12, preparedness: '2 — Barely', status: 'Done', difficultyFelt: '5 — Brutal', reviewNotes: 'Confused method overriding vs overloading; dynamic dispatch unclear.' },
+      { course: OOP, type: 'Midterm', title: 'Midterm — Ch 1-6', date: day(3), time: '14:00', venue: 'AB4-401', topics: ['inheritance', 'polymorphism', 'interfaces'], weight: 25, totalMarks: 40, status: 'Upcoming', preparedness: '3 — Okay' },
+      // DBMS — strong and above class
+      { course: DBMS, type: 'Class Test', title: 'CT 1 — ER Modeling', date: day(-18), topics: ['er model'], weight: 10, totalMarks: 20, obtainedMarks: 18, classAverage: 14, preparedness: '5 — Fully ready', status: 'Done' },
+      { course: DBMS, type: 'Quiz', title: 'Quiz 1 — SQL Joins', date: day(-8), topics: ['sql'], weight: 5, totalMarks: 20, obtainedMarks: 17, classAverage: 13, preparedness: '4 — Well prepared', status: 'Done' },
+      { course: DBMS, type: 'Midterm', title: 'Midterm — ER to Normalization', date: day(8), time: '11:40', topics: ['er model', 'sql', 'normalization'], weight: 25, totalMarks: 40, status: 'Upcoming' },
+      // SAD + MIS
+      { course: SAD, type: 'Quiz', title: 'Quiz 1 — DFD Levels', date: day(-10), topics: ['dfd'], weight: 5, totalMarks: 15, obtainedMarks: 11, classAverage: 10, status: 'Done' },
+      { course: SAD, type: 'Quiz', title: 'Quiz 2 — Use Cases', date: day(1), time: '10:00', topics: ['use case'], weight: 5, totalMarks: 15, status: 'Upcoming' },
+      { course: MIS, type: 'Presentation', title: 'Group Presentation — ERP Case', date: day(6), topics: ['erp'], weight: 10, totalMarks: 20, status: 'Upcoming' },
+    ],
+    assignments: [
+      { course: DBMS, title: 'Library Database Design Report', subtitle: 'ER diagram to normalized schema', assignedDate: day(-6), dueDate: day(4), weight: 10, totalMarks: 20, format: '8-10 pages', submissionMode: 'Email', priority: 'High', requirements: 'Cover page\nER diagram (Crow’s foot)\nNormalization to 3NF shown step by step\nSQL DDL script\nReferences', reqTicks: { 0: true, 1: true }, canvasContent: 'The library management system tracks members, books, loans and fines.\n\n**Entities**: Member, Book, Copy, Loan, Fine, Staff.\n\nThe ER model places Member and Copy in a many-to-many relation resolved by Loan...', status: 'In Progress' },
+      { course: SAD, title: 'Use Case Diagram — Online Pharmacy', assignedDate: day(-3), dueDate: day(2), weight: 5, format: 'Diagram + 2-page description', submissionMode: 'Hardcopy', priority: 'Medium', requirements: 'Actor list\nUse case diagram\nInclude/extend relations explained', status: 'To Do' },
+      { course: OOP, title: 'Bank Account OOP Implementation', subtitle: 'Inheritance & polymorphism in practice', assignedDate: day(-14), dueDate: day(-2), weight: 8, totalMarks: 15, submissionMode: 'Email', priority: 'High', requirements: 'Class hierarchy diagram\nSavings & Current account subclasses\nOverridden withdraw() rules\nJUnit-style test output screenshots', reqTicks: { 0: true, 1: true, 2: true, 3: true }, canvasContent: '**Design.** Account is the abstract base class with balance, deposit() and an abstract withdraw().\n\nSavingsAccount overrides withdraw() to enforce the minimum balance; CurrentAccount allows an overdraft limit...\n\n**Polymorphism.** A single Account[] processes month-end interest via dynamic dispatch.', status: 'Completed' },
+      { course: MIS, title: 'ERP Adoption Case Study', subtitle: 'Why mid-size firms fail at ERP', assignedDate: day(-20), dueDate: day(-7), weight: 10, submissionMode: 'Email', requirements: '1500 words\n2 real company cases\nAPA references', status: 'Submitted', submittedAt: day(-8), canvasContent: 'ERP projects fail less from software and more from process mismatch...' },
+    ],
+  };
+}
+function acadLoadStarter() {
+  if (!Security.guard('load starter data')) return;
+  acadEnsure();
+  const existing = ACAD_ENTITIES.reduce((s, k) => s + DB.getAll(k).length, 0);
+  if (existing && !confirm(`You already have ${existing} academic records — add the starter pack on top?`)) return;
+  const pack = acadStarterData();
+  const now = new Date().toISOString();
+  Object.entries(pack).forEach(([entity, rows]) => rows.forEach(r => { r.id = uid(); r.createdAt = now; DB.data[entity].push(r); }));
+  DB.save();
+  toast('Starter data loaded — your Academics is alive. Edit anything, anytime.', 'ok');
+  acadRedraw();
+}
+if (typeof window !== 'undefined') window.AcademicsStarter = { load: acadLoadStarter };
 
 /* ---------- init + registration ---------- */
 function acadRedraw() { try { acadEnsure(); acadRenderStats(); acadRenderToday(); acadRenderSchedule(); acadRenderCourses(); acadRenderAssessments(); acadRenderBoard(); } catch (e) { console.warn('[academics] render failed:', e); } }
