@@ -1506,6 +1506,10 @@ function emptyState(icon, title, text, btnLabel, onClick, ownerOnly = false) {
    also self-mounts on an interval, so this initializer just nudges it. */
 function initEon() {
   try { window.EonDeck && window.EonDeck.mount(); } catch {}
+  // Load the private finance ledger so the money radar / digital twin / crisis feed
+  // have real data here (owner only). It's async + synced; the deck re-renders when
+  // the data lands (it watches the finance tx count in its signature).
+  try { if (Security.isOwner() && typeof FinanceDB !== 'undefined' && FinanceDB) { FinanceDB.loadLocal(); FinanceDB.loadCloud(); } } catch {}
   // Native productivity + signal panels (moved here from the dashboard). The
   // compute pass already ran at boot; just render into this page's containers.
   try { computeSignals(); renderSignalPanel(); } catch {}
