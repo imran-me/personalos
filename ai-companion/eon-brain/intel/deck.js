@@ -21,6 +21,7 @@ import '../models/win-predictor.js';
 import '../analytics/anomaly.js';
 import '../analytics/impact.js';
 import '../intel/boardroom.js';   // registers window.EonBoardroom (feature a)
+import '../intel/twin.js';        // registers window.EonTwin (feature b)
 
 const A = '#4f46e5';        // indigo accent (used sparingly)
 const G = '#0f9d58', AM = '#c77d0a', R = '#d6453d', SL = '#64748b';
@@ -236,6 +237,9 @@ function cardProver() {
 function cardBoard() {
   return card('Board meeting', 'four advisors argue your call, grounded in your data', `<p class="ed-empty">Put any decision to Eon's boardroom — <b>CFO</b>, <b>Skeptic</b>, <b>Growth</b> and <b>Compliance</b> debate it live and converge on a verdict, with the dissenting view kept visible.</p><button class="ed-cardbtn" id="edBoard"><i class="bi bi-chat-square-quote me-1"></i>Convene the board</button>`);
 }
+function cardTwin() {
+  return card('Digital twin', 'Monte-Carlo forecast of your next 90 days', `<p class="ed-empty">Eon fast-forwards hundreds of possible futures from your cash flow and pipeline, then shows the <b>probability fan</b> of outcomes — the odds you stay cash-positive, not a single guess.</p><button class="ed-cardbtn" id="edTwin"><i class="bi bi-graph-up me-1"></i>Run the simulation</button>`);
+}
 const DECISION_RE = /\b(should i|shall i|do i|is it worth|worth it|better to|hire|fire|buy|invest|expand|launch|borrow|quit|pivot|raise|discount|scale)\b|\?\s*$/i;
 
 function card(title, sub, body) { return `<div class="ed-card"><div class="ed-ct">${title}</div><div class="ed-cs">${sub}</div>${body}</div>`; }
@@ -277,7 +281,7 @@ const EonDeck = {
     let m; try { m = compute(); } catch { host.innerHTML = `<div class="ed-card">Warming up…</div>`; return; }
     const L = live();
     // Business section only shows cards that have real content (no empty space).
-    const bizCards = [(m.leaks && m.leaks.hasData) ? cardMoney(m.leaks) : '', cardBoard(), cardProver()].filter(Boolean);
+    const bizCards = [(m.leaks && m.leaks.hasData) ? cardMoney(m.leaks) : '', cardBoard(), cardTwin(), cardProver()].filter(Boolean);
     host.innerHTML = `
       <div class="ed-hero">
         <div><h1>Intelligence</h1><p>Everything Eon reads, predicts and decides across your operation — one brain, explained.</p></div>
@@ -305,6 +309,8 @@ const EonDeck = {
     host.querySelectorAll('#edProve, .ed-provetrigger').forEach((pv) => { pv.onclick = () => { try { window.EonProver && window.EonProver.openOverlay({ onReact: () => setTimeout(() => this.render(), 400) }); } catch {} }; });
     const bd = host.querySelector('#edBoard');
     if (bd) bd.onclick = () => { try { window.EonBoardroom && window.EonBoardroom.open(); } catch {} };
+    const tw = host.querySelector('#edTwin');
+    if (tw) tw.onclick = () => { try { window.EonTwin && window.EonTwin.open(); } catch {} };
     const ask = host.querySelector('#edAsk'), askBtn = host.querySelector('#edAskBtn');
     const doAsk = () => {
       const q = (ask && ask.value || '').trim(); if (!q) return;
