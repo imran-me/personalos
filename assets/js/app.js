@@ -1562,10 +1562,17 @@ function initDashboard() {
     { lbl: 'Documents Ready', val: docs.filter(d => d.status === 'Ready' || d.status === 'Updated').length, ico: 'folder-check', t: 'accent' },
     { lbl: 'Active Tasks', val: tasks.filter(t => !['Completed', 'Cancelled'].includes(t.status)).length, ico: 'list-task', t: 'amber' },
     { lbl: 'Completed Tasks', val: tasks.filter(t => t.status === 'Completed').length, ico: 'check2-circle', t: 'green' },
-    { lbl: 'Upcoming Deadlines', val: opps.filter(o => { const d = daysUntil(o.deadline); return d !== null && d >= 0 && d <= 30; }).length, ico: 'alarm-fill', t: 'red' }
+    { lbl: 'Upcoming Deadlines', val: opps.filter(o => { const d = daysUntil(o.deadline); return d !== null && d >= 0 && d <= 30; }).length, ico: 'alarm-fill', t: 'red' },
+    { eon: true }   // compact launcher tile → the full Eon Intelligence page (owner only)
   ];
   document.getElementById('statGrid').innerHTML = cards.map(c => c.group
     ? `<div class="stat-group">${c.group}</div>`
+    : c.eon
+    ? `<a class="stat stat-eon owner-only" href="eon.html" title="Open Eon Intelligence — all your AI analysis in one place">
+      <div class="ico"><i class="bi bi-cpu-fill"></i></div>
+      <div class="val">Eon</div>
+      <div class="lbl">Intelligence <i class="bi bi-arrow-right"></i></div>
+    </a>`
     : `<div class="stat">
       <div class="ico t-${c.t}"><i class="bi bi-${c.ico}"></i></div>
       <div class="val">${c.val}</div>

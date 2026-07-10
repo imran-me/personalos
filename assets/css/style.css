@@ -262,6 +262,13 @@ a:hover { color: var(--primary-700); }
 }
 .stat .val { font-family: var(--font-mono); font-weight: 700; font-size: 21px; line-height: 1; color: #16203a; }
 .stat .lbl { color: var(--text-soft); font-size: 11.5px; margin-top: 4px; font-weight: 500; }
+/* Eon launcher — same footprint as a KPI tile, but a link to the full page */
+a.stat-eon { text-decoration: none; color: inherit; }
+a.stat-eon .ico { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; box-shadow: 0 4px 12px rgba(79, 70, 229, .28); }
+a.stat-eon .val { font-family: var(--font-display); font-size: 17px; letter-spacing: -.01em; }
+a.stat-eon .lbl { color: var(--primary); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+a.stat-eon .lbl i { font-size: 10px; transition: transform .15s; }
+a.stat-eon:hover .lbl i { transform: translateX(3px); }
 /* full-width row label that breaks the grid into labelled groups */
 .stat-grid .stat-group { grid-column: 1 / -1; font-size: 11px; font-weight: 700; letter-spacing: .4px;
   text-transform: uppercase; color: var(--text-faint); margin: 6px 2px 0; }
