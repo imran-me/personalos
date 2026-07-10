@@ -86,7 +86,7 @@ export class AskEon {
       matching records for the question, next deadline, best bet, money headline. */
   _fallback(q) {
     const detail = [];
-    const DONE = /done|complete|closed|won|lost|accept|reject|success|approved|paid|submitted|finished|archiv|cancel|withdraw|missed/i;
+    const DONE = /done|complete|closed|won|lost|accept|reject|success|approved|paid|submitted|finished|archiv|cancel|withdraw|missed|graded/i;
     try {  // closest records by token overlap — practical even off-library
       const toks = String(q || '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4);
       if (toks.length) {

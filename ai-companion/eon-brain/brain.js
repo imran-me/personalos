@@ -112,7 +112,7 @@ export class Brain {
     // won/lost/closed/completed item even if its date is in the past.
     // "Missed Deadline" is a deliberate owner choice (couldn't participate) —
     // it is resolved, so EON must stay silent on it too.
-    const DONE = /done|complete|closed|won|lost|accept|reject|success|approved|paid|submitted|finished|archiv|cancel|irrelevant|withdraw|missed/i;
+    const DONE = /done|complete|closed|won|lost|accept|reject|success|approved|paid|submitted|finished|archiv|cancel|irrelevant|withdraw|missed|graded/i;
     for (const r of records) {
       if (!r.deadlineAt) continue;
       const st = String(r.payload?.status || r.payload?.stage || '');

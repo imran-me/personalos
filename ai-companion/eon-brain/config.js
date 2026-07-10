@@ -29,7 +29,7 @@ export const BRAIN_CONFIG = {
   //    notification watcher), so letting EON re-scan reminders as "deadlines"
   //    only produced duplicate/stale nags (e.g. an old "…final submission
   //    (overdue)" reminder). EON's own manual reminders still work separately.
-  deadlineEntities: ['opportunities', 'tasks'],
+  deadlineEntities: ['opportunities', 'tasks', 'assessments', 'assignments'],
 
   // ── Deadline warning windows, in days (descending). ──
   windows: [7, 3, 1, 0],
@@ -45,6 +45,10 @@ export const BRAIN_CONFIG = {
   linkPatterns: {
     opportunities: 'opportunity-details.html?id={id}',
     tasks:         'tasks.html',
+    assessments:   'academics.html',
+    assignments:   'academics.html',
+    courses:       'academics.html',
+    attendance:    'academics.html',
     documents:     'documents.html',
     achievements:  'achievements.html',
     training:      'training.html',

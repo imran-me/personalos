@@ -85,7 +85,7 @@ export class CompanionBrain {
   plan({ horizon = 7, max = 8 } = {}) {
     const recs = (() => { try { return this.brain()?.getRecords?.() || []; } catch { return []; } })();
     const now = Date.now();
-    const DONE = /done|complete|closed|won|lost|accept|reject|success|approved|paid|submitted|finished|archiv|cancel|withdraw|missed/i;
+    const DONE = /done|complete|closed|won|lost|accept|reject|success|approved|paid|submitted|finished|archiv|cancel|withdraw|missed|graded/i;
     const items = recs
       .filter((r) => r.deadlineAt && !Number.isNaN(Date.parse(r.deadlineAt)))
       .filter((r) => !DONE.test(String(r.payload?.status || r.payload?.stage || r.payload?.state || '')))
@@ -134,7 +134,7 @@ export class CompanionBrain {
     const now = Date.now();
     // "missed" → the owner marked "Missed Deadline" on purpose; it's resolved,
     // so it must never surface as a loose end / nudge.
-    const DONE = /done|complete|closed|won|accept|success|approved|paid|submitted|finished|archiv|reject|missed/i;
+    const DONE = /done|complete|closed|won|accept|success|approved|paid|submitted|finished|archiv|reject|missed|graded/i;
     const out = [];
 
     // deadline-based: overdue-and-still-open, due today / tomorrow

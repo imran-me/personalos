@@ -1,0 +1,109 @@
+/* ==========================================================
+   ACADEMICS — styles (assets/css/academics.css)
+   Uses the app's theme tokens; scoped to .acad-* / #acadCanvas.
+   ========================================================== */
+
+/* ---- today's classes (one-tap attendance) ---- */
+.acad-todayrow { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--k, var(--primary)); border-radius: 11px; margin-bottom: 8px; background: var(--surface); }
+.acad-time { font-family: var(--font-mono); font-weight: 700; font-size: 12px; color: #16203a; min-width: 92px; }
+.acad-tbody { flex: 1; min-width: 0; }
+.acad-tbody b { display: block; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acad-tbody small { color: var(--text-soft); font-size: 11.5px; }
+.acad-attwrap { display: flex; gap: 6px; flex-wrap: wrap; }
+.acad-att { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 5px 10px; font: 600 11.5px var(--font-ui); color: var(--text-soft); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: .15s; }
+.acad-att i { font-size: 12px; }
+.acad-att.p:hover { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+.acad-att.l:hover { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); }
+.acad-att.a:hover { border-color: var(--red); color: var(--red); background: var(--red-soft); }
+.acad-att.c:hover { border-color: var(--slate); color: var(--slate); background: var(--slate-soft); }
+.acad-marked { font: 700 12px var(--font-ui); padding: 5px 11px; border-radius: 999px; }
+.acad-marked.st-Present { background: var(--green-soft); color: var(--green); }
+.acad-marked.st-Late { background: var(--amber-soft); color: var(--amber); }
+.acad-marked.st-Absent { background: var(--red-soft); color: var(--red); }
+.acad-marked.st-Cancelled, .acad-marked.st-Holiday { background: var(--slate-soft); color: var(--slate); }
+.acad-unmark { border: 0; background: none; color: var(--text-faint); cursor: pointer; font-size: 15px; }
+.acad-unmark:hover { color: var(--primary); }
+
+/* ---- weekly schedule grid ---- */
+.acad-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 9px; }
+.acad-day { border: 1px solid var(--line); border-radius: 12px; padding: 8px; min-height: 90px; background: var(--surface-2); }
+.acad-day.today { border-color: var(--primary); background: var(--primary-soft); }
+.acad-dayhead { font: 700 11px var(--font-ui); text-transform: uppercase; letter-spacing: .06em; color: var(--text-soft); margin-bottom: 7px; display: flex; align-items: center; gap: 6px; }
+.acad-dayhead span { font-size: 9px; background: var(--primary); color: #fff; border-radius: 999px; padding: 1px 7px; text-transform: none; letter-spacing: 0; }
+.acad-slot { background: #fff; border: 1px solid var(--line); border-left: 3px solid var(--k, var(--primary)); border-radius: 8px; padding: 6px 8px; margin-bottom: 6px; }
+.acad-slot b { display: block; font-size: 11.5px; color: #16203a; }
+.acad-slot small { color: var(--text-soft); font-size: 10px; }
+.acad-free { color: var(--text-faint); font-size: 12px; text-align: center; padding-top: 14px; }
+
+/* ---- course cards ---- */
+.acad-courses { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.acad-course { border: 1px solid var(--line); border-top: 3px solid var(--k, var(--primary)); border-radius: 13px; padding: 13px 14px; background: var(--surface); cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.acad-course:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.acad-course.done { opacity: .82; background: var(--surface-2); }
+.acad-chead { display: flex; align-items: center; gap: 8px; }
+.acad-chead b { font-family: var(--font-mono); font-size: 12.5px; color: var(--primary-700); }
+.acad-credit { margin-left: auto; font-size: 10.5px; color: var(--text-faint); font-weight: 600; }
+.acad-grade { font: 800 13px var(--font-mono); color: var(--green); background: var(--green-soft); border-radius: 8px; padding: 2px 9px; }
+.acad-ctitle { font-weight: 700; font-size: 14px; color: #16203a; margin-top: 5px; line-height: 1.3; }
+.acad-cteach { color: var(--text-soft); font-size: 11.5px; margin-top: 2px; }
+.acad-attbar { position: relative; height: 6px; border-radius: 4px; background: var(--line-2); overflow: visible; margin-top: 11px; }
+.acad-attbar span { display: block; height: 100%; border-radius: 4px; transition: width .4s; }
+.acad-attbar i { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--text-faint); border-radius: 1px; }
+.acad-cfoot { display: flex; gap: 6px; flex-wrap: wrap; font-size: 11.5px; color: var(--text); margin-top: 8px; }
+
+/* ---- assessments ---- */
+.acad-upgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+.acad-up { display: flex; align-items: center; gap: 11px; border: 1px solid var(--line); border-left: 3px solid var(--k, var(--primary)); border-radius: 11px; padding: 10px 12px; cursor: pointer; background: var(--surface); }
+.acad-up:hover { border-color: var(--primary); }
+.acad-cd { font-family: var(--font-mono); font-weight: 700; font-size: 12px; min-width: 46px; text-align: center; padding: 5px 0; border-radius: 8px; background: var(--primary-soft); color: var(--primary-700); }
+.acad-cd.soon { background: var(--red-soft); color: var(--red); }
+.acad-upbody { flex: 1; min-width: 0; }
+.acad-upbody b { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acad-upbody small { color: var(--text-soft); font-size: 11px; display: block; }
+.acad-topics em { font-style: normal; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 6px; padding: 0 6px; margin-right: 4px; font-size: 10px; color: var(--text-soft); }
+.acad-res { display: flex; align-items: center; gap: 11px; padding: 8px 4px; border-top: 1px solid var(--line-2); cursor: pointer; }
+.acad-res:hover b { color: var(--primary); }
+.acad-respct { font-family: var(--font-mono); font-weight: 700; font-size: 13px; min-width: 48px; text-align: center; padding: 4px 0; border-radius: 8px; }
+.acad-respct.g { background: var(--green-soft); color: var(--green); }
+.acad-respct.a { background: var(--amber-soft); color: var(--amber); }
+.acad-respct.r { background: var(--red-soft); color: var(--red); }
+.acad-resbody { flex: 1; min-width: 0; }
+.acad-resbody b { font-size: 13px; display: block; }
+.acad-resbody small { color: var(--text-soft); font-size: 11px; }
+.acad-vs { font: 700 11px var(--font-mono); }
+.acad-vs.up { color: var(--green); } .acad-vs.dn { color: var(--red); }
+
+/* ---- assignment board tweaks (reuses .kanban/.kcol/.kcard) ---- */
+.acad-board .kcard { border-left: 3px solid var(--k, var(--primary)); }
+.acad-asgmeta { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 6px; font-size: 10.5px; color: var(--text-soft); }
+.acad-asgmeta i { margin-right: 3px; }
+.acad-gradechip { background: var(--green-soft); color: var(--green); font-weight: 700; border-radius: 6px; padding: 0 6px; }
+
+/* ---- the working canvas ---- */
+#acadCanvas { position: fixed; inset: 0; z-index: 2147483630; background: rgba(12, 18, 34, .55); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; }
+#acadCanvas .acv-card { width: min(860px, 95vw); height: min(88vh, 900px); background: #fff; border-radius: 18px; box-shadow: 0 30px 70px rgba(8, 14, 30, .42); display: flex; flex-direction: column; overflow: hidden; }
+#acadCanvas .acv-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); border-top: 4px solid var(--k, var(--primary)); }
+#acadCanvas .acv-ht { flex: 1; min-width: 0; }
+#acadCanvas .acv-ht b { font: 700 16px var(--font-display); color: #111634; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#acadCanvas .acv-ht small { color: var(--text-soft); font-size: 12px; }
+#acadCanvas .acv-status { font: 700 10.5px var(--font-ui); text-transform: uppercase; letter-spacing: .05em; background: var(--primary-soft); color: var(--primary-700); border-radius: 999px; padding: 4px 11px; }
+#acadCanvas .acv-edit { border: 0; background: none; color: var(--text-faint); cursor: pointer; font-size: 15px; }
+#acadCanvas .acv-edit:hover { color: var(--primary); }
+#acadCanvas .acv-x { cursor: pointer; font-size: 19px; color: var(--text-faint); }
+#acadCanvas .acv-x:hover { color: var(--text); }
+#acadCanvas .acv-body { flex: 1; overflow: auto; padding: 14px 18px; display: flex; flex-direction: column; }
+#acadCanvas .acv-sec { font: 700 10.5px var(--font-ui); text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint); margin: 6px 0 8px; display: flex; align-items: center; gap: 10px; }
+#acadCanvas .acv-saved { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--green); }
+#acadCanvas .acv-reqs { margin-bottom: 10px; }
+#acadCanvas .acv-req { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--text); padding: 4px 0; cursor: pointer; }
+#acadCanvas .acv-req input { width: 15px; height: 15px; accent-color: var(--primary); }
+#acadCanvas .acv-req input:checked + span { text-decoration: line-through; color: var(--text-faint); }
+#acadCanvas textarea { flex: 1; min-height: 260px; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font: 500 14px/1.7 var(--font-ui); color: #1f2937; resize: none; outline: 0; }
+#acadCanvas textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-ring); }
+#acadCanvas .acv-foot { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+#acadCanvas .acv-move { display: flex; gap: 5px; flex-wrap: wrap; }
+#acadCanvas .acv-col { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 5px 12px; font: 600 11px var(--font-ui); color: var(--text-soft); cursor: pointer; }
+#acadCanvas .acv-col.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+#acadCanvas .acv-actions { margin-left: auto; display: flex; gap: 8px; }
+
+@media (max-width: 900px) { .acad-week { grid-template-columns: repeat(2, 1fr); } .acad-day { min-height: 0; } }

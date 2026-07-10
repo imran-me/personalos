@@ -863,6 +863,7 @@ const NAV = [
   ]},
   { group: 'Manage', items: [
     { page: 'opportunities', href: 'opportunities.html', icon: 'compass-fill', label: 'Opportunities', countOf: 'opportunities' },
+    { page: 'academics',     href: 'academics.html',     icon: 'mortarboard-fill', label: 'Academics', countOf: 'courses' },
     { page: 'tasks',         href: 'tasks.html',         icon: 'kanban-fill',  label: 'Task Board',  countOf: 'tasks' },
     { page: 'documents',     href: 'documents.html',     icon: 'folder-fill',  label: 'Documents',   countOf: 'documents' },
     { page: 'achievements',  href: 'achievements.html',  icon: 'trophy-fill',  label: 'Achievements',countOf: 'achievements' },
@@ -5111,6 +5112,7 @@ function renderActivePage(page) {
       accounts: ['Accounts', 'Private income, expense & savings intelligence — owner only'],
       eon: ['Eon Intelligence', 'Your AI co-worker — live analysis, predictions, decisions and impact'],
       opportunities: ['Opportunities', 'Track every scholarship, fellowship and competition'],
+      academics: ['Academics', 'Courses, schedule, attendance, tests & assignments — your institution layer'],
       'opportunity-details': ['Opportunity', 'Full record and application timeline'],
       tasks: ['Task Board', 'Drag tasks across stages to update status'],
       documents: ['Documents', 'Passports, CVs, SOPs, transcripts and their status'],
