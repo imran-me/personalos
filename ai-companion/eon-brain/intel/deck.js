@@ -24,6 +24,7 @@ import '../intel/boardroom.js';   // registers window.EonBoardroom (feature a)
 import '../intel/twin.js';        // registers window.EonTwin (feature b)
 import '../intel/selfcorrect.js'; // registers window.EonSelfCorrect (feature c)
 import '../intel/crisis.js';      // registers window.EonCrisis (feature d)
+import '../analytics/graph.js';   // registers window.EonGraph (relationship-graph intelligence)
 
 const A = '#4f46e5';        // indigo accent (used sparingly)
 const G = '#0f9d58', AM = '#c77d0a', R = '#d6453d', SL = '#64748b';
@@ -284,6 +285,19 @@ function cardCrisis() {
   return card('Crisis feed', 'live markets fused with your exposure', `<div id="edCrisisBody"><p class="ed-empty">Reaching the market feed…</p></div>`);
 }
 
+function cardGraph(g) {
+  if (!g || !g.ok) return '';
+  const recs = g.recs.slice(0, 4).map((r) => `<div style="padding:8px 0;border-top:1px solid var(--line-2,#eef1f6)"><b style="font-size:12.5px;color:#16203a">${esc(r.contact)}</b><small style="display:block;color:var(--text-soft);font-size:11.5px">strongest referee for <b>${esc(r.opp)}</b> · ${r.shared} shared ${r.shared > 1 ? 'themes' : 'theme'}</small></div>`).join('');
+  const neg = g.neglected.slice(0, 2).map((n) => `<div style="font-size:12px;color:${AM};margin-top:8px"><i class="bi bi-arrow-repeat me-1"></i>You've gone quiet with <b>${esc(n.name)}</b> — ${n.days} days. Reach out.</div>`).join('');
+  return `<div class="ed-card">
+    <div class="ed-ct">Relationship graph</div><div class="ed-cs">${g.contacts} contacts × ${g.opps} opportunities · who to ask for what</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center">
+      <div style="min-width:0">${g.edges.length ? window.EonGraph.graphSvg(g) : '<p class="ed-empty">No overlaps yet.</p>'}</div>
+      <div style="min-width:0"><div style="font:700 11px Inter;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:2px">Best referees</div>${recs || '<p class="ed-empty">Add fields/skills to your contacts and Eon matches them to opportunities.</p>'}${neg}</div>
+    </div>
+  </div>`;
+}
+
 function card(title, sub, body) { return `<div class="ed-card"><div class="ed-ct">${title}</div><div class="ed-cs">${sub}</div>${body}</div>`; }
 
 function liveSection(m, L) {
@@ -343,6 +357,8 @@ const EonDeck = {
         <div class="ed-seclabel"><b>Business</b></div>
         <div class="ed-grid ${bizCards.length >= 3 ? 'ed-3' : bizCards.length === 2 ? 'ed-2' : ''}">${bizCards.join('')}</div>
       </div>
+
+      ${(() => { let g = null; try { g = window.EonGraph && window.EonGraph.compute(); } catch {} return (g && g.ok) ? `<div class="ed-sec"><div class="ed-seclabel"><b>Network</b></div><div class="ed-grid">${cardGraph(g)}</div></div>` : ''; })()}
 
       <div class="ed-sec">
         <div class="ed-seclabel"><b>Reports</b></div>
