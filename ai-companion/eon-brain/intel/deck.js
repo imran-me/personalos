@@ -26,6 +26,7 @@ import '../intel/selfcorrect.js'; // registers window.EonSelfCorrect (feature c)
 import '../intel/crisis.js';      // registers window.EonCrisis (feature d)
 import '../analytics/graph.js';   // registers window.EonGraph (relationship-graph intelligence)
 import '../analytics/learn.js';   // registers window.EonLearn (adaptive learning loop)
+import '../intel/agent.js';       // registers window.EonAgent (NL -> action agent, idea #3)
 
 const A = '#4f46e5';        // indigo accent (used sparingly)
 const G = '#0f9d58', AM = '#c77d0a', R = '#d6453d', SL = '#64748b';
@@ -251,6 +252,10 @@ function cardBoard() {
 function cardTwin() {
   return card('Digital twin', 'Monte-Carlo forecast of your next 90 days', `<p class="ed-empty">Eon fast-forwards hundreds of possible futures from your cash flow and pipeline, then shows the <b>probability fan</b> of outcomes — the odds you stay cash-positive, not a single guess.</p><button class="ed-cardbtn" id="edTwin"><i class="bi bi-graph-up me-1"></i>Run the simulation</button>`);
 }
+function cardAgent() {
+  return card('Action agent', 'tell Eon what to do — it plans, you approve, it writes', `<p class="ed-empty">“Plan my Chevening application and remind me every Sunday.” Eon turns a messy instruction into a dated plan and — on your approval — writes the reminders to your synced brain. Advisory-first.</p><button class="ed-cardbtn" id="edAgent"><i class="bi bi-robot me-1"></i>Give Eon a task</button>`);
+}
+const COMMAND_RE = /\b(plan|prepare|prep|remind|create|build|organi[sz]e|set ?up|schedule|draft me|make me|apply)\b/i;
 const DECISION_RE = /\b(should i|shall i|do i|is it worth|worth it|better to|hire|fire|buy|invest|expand|launch|borrow|quit|pivot|raise|discount|scale)\b|\?\s*$/i;
 
 function cardCalibration() {
@@ -346,7 +351,7 @@ const EonDeck = {
     let m; try { m = compute(); } catch { host.innerHTML = `<div class="ed-card">Warming up…</div>`; return; }
     const L = live();
     // Business section only shows cards that have real content (no empty space).
-    const bizCards = [(m.leaks && m.leaks.hasData) ? cardMoney(m.leaks) : '', cardBoard(), cardTwin(), cardCrisis(), cardProver()].filter(Boolean);
+    const bizCards = [(m.leaks && m.leaks.hasData) ? cardMoney(m.leaks) : '', cardBoard(), cardTwin(), cardAgent(), cardCrisis(), cardProver()].filter(Boolean);
     host.innerHTML = `
       <div class="ed-hero">
         <div><h1>Intelligence</h1><p>Everything Eon reads, predicts and decides across your operation — one brain, explained.</p></div>
@@ -381,13 +386,16 @@ const EonDeck = {
     if (tw) tw.onclick = () => { try { window.EonTwin && window.EonTwin.open(); } catch {} };
     const sc = host.querySelector('#edSelf');
     if (sc) sc.onclick = () => { try { window.EonSelfCorrect && window.EonSelfCorrect.open(); } catch {} };
+    const ag = host.querySelector('#edAgent');
+    if (ag) ag.onclick = () => { try { window.EonAgent && window.EonAgent.open(); } catch {} };
     const cb = host.querySelector('#edCrisisBody');
     if (cb && !cb._hydrated) { cb._hydrated = true; try { window.EonCrisis && window.EonCrisis.render(cb); } catch {} }
     const ask = host.querySelector('#edAsk'), askBtn = host.querySelector('#edAskBtn');
     const doAsk = () => {
       const q = (ask && ask.value || '').trim(); if (!q) return;
-      // a decision → convene the board; a question → the existing Ask EON engine
-      if (DECISION_RE.test(q)) { try { window.EonBoardroom && window.EonBoardroom.open(q); } catch {} }
+      // a command → the action agent; a decision → the board; else → Ask EON
+      if (COMMAND_RE.test(q)) { try { window.EonAgent && window.EonAgent.open(q); } catch {} }
+      else if (DECISION_RE.test(q)) { try { window.EonBoardroom && window.EonBoardroom.open(q); } catch {} }
       else { try { const chip = document.getElementById('eon-ask-chip'); if (chip) chip.click(); } catch {} }
       if (ask) ask.value = '';
     };
