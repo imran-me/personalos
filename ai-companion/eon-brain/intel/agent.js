@@ -103,7 +103,9 @@ function injectStyle() {
   #eon-agent .ag-step:first-of-type{border-top:0}
   #eon-agent .ag-chk{width:17px;height:17px;flex:0 0 auto;accent-color:${A};cursor:pointer}
   #eon-agent .ag-n{width:22px;height:22px;flex:0 0 auto;border-radius:7px;background:#eef0fe;color:${A};display:grid;place-items:center;font:700 11px "JetBrains Mono"}
-  #eon-agent .ag-body{flex:1;min-width:0;cursor:pointer;margin:0}
+  #eon-agent .ag-body{flex:1;min-width:0}
+  #eon-agent .ag-body label{cursor:pointer;display:inline-block}
+  #eon-agent .ag-date::-webkit-calendar-picker-indicator{cursor:pointer}
   #eon-agent .ag-step b{font-size:13px;color:#16203a;font-weight:600}
   #eon-agent .ag-when{display:flex;align-items:center;gap:6px;margin-top:4px;color:#5b6678;font-size:11.5px}
   #eon-agent .ag-when i{font-size:12px;color:#9aa3b2}
@@ -149,9 +151,10 @@ function show(el, text) {
       <div class="ag-step">
         <input type="checkbox" class="ag-chk" id="agchk${i}" checked>
         <span class="ag-n">${i + 1}</span>
-        <label class="ag-body" for="agchk${i}"><b>${esc(s.title)}</b>
-          <span class="ag-when" onclick="event.preventDefault()"><i class="bi bi-clock"></i><input type="date" class="ag-date" value="${dstr(s.when)}">${s.repeat ? ' · repeats ' + esc(s.repeat) : ''}</span>
-        </label>
+        <div class="ag-body">
+          <label for="agchk${i}"><b>${esc(s.title)}</b></label>
+          <span class="ag-when"><i class="bi bi-clock"></i><input type="date" class="ag-date" value="${dstr(s.when)}" onclick="try{this.showPicker&&this.showPicker()}catch(e){}">${s.repeat ? ' · repeats ' + esc(s.repeat) : ''}</span>
+        </div>
       </div>`).join('')}
     <div class="ag-act"><button class="ag-go"><i class="bi bi-check2-circle me-1"></i>Create <span class="ag-count">${p.steps.length}</span> reminder<span class="ag-plural">s</span></button><button class="ag-cancel">Not now</button></div>`;
   const chks = [...wrap.querySelectorAll('.ag-chk')];

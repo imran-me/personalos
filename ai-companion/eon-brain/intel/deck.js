@@ -219,13 +219,24 @@ function injectStyle() {
   #eonDeck .ed-trace .tr:first-child{color:#111634;font-weight:500}
   #eonDeck .ed-trace .tr i{font-family:"JetBrains Mono",monospace;font-style:normal;color:var(--text-faint,#9aa3b2);font-size:10.5px;flex:0 0 auto}
   /* ask bar */
-  #eonDeck .ed-ask{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--line,#e7eaf1);border-radius:14px;padding:7px 7px 7px 17px;margin-bottom:28px;transition:border-color .15s,box-shadow .15s}
+  #eonDeck .ed-ask{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--line,#e7eaf1);border-radius:14px;padding:7px 7px 7px 17px;margin-bottom:12px;transition:border-color .15s,box-shadow .15s}
   #eonDeck .ed-ask:focus-within{border-color:${A};box-shadow:0 0 0 3px rgba(79,70,229,.12)}
   #eonDeck .ed-ask .q{color:${A};font-size:17px}
   #eonDeck .ed-ask input{flex:1;border:0;outline:0;font:500 14px "Inter";color:#16203a;background:transparent}
   #eonDeck .ed-ask input::placeholder{color:var(--text-faint,#9aa3b2)}
   #eonDeck .ed-ask button{border:0;background:${A};color:#fff;border-radius:10px;padding:10px 18px;font:700 12.5px "Inter";cursor:pointer;transition:background .15s}
   #eonDeck .ed-ask button:hover{background:#4338ca}
+  /* inline Ask Eon answer (right on the deck, not a floating popup) */
+  #eonDeck .ed-answer{background:#fff;border:1px solid var(--line,#e7eaf1);border-radius:14px;padding:14px 17px;margin-bottom:28px}
+  #eonDeck .ed-ansq{font:600 12.5px "Inter";color:var(--text-faint,#9aa3b2);margin-bottom:8px}
+  #eonDeck .ed-ansa{font-size:14px;color:#1f2937;line-height:1.55}
+  #eonDeck .ed-ansa .sp{color:#16203a;font-weight:500}
+  #eonDeck .ed-ansa .dt{margin-top:8px;display:flex;flex-direction:column;gap:4px;color:#374151;font-size:13px}
+  #eonDeck .ed-ansa .dt>div{padding-left:2px}
+  #eonDeck .ed-anstyping{color:var(--text-faint,#9aa3b2);font-weight:500}
+  #eonDeck .ed-anstyping i{font-style:normal;animation:edtype 1.2s infinite}
+  #eonDeck .ed-anstyping i:nth-child(2){animation-delay:.2s}#eonDeck .ed-anstyping i:nth-child(3){animation-delay:.4s}
+  @keyframes edtype{0%,60%,100%{opacity:.25}30%{opacity:1}}
   @media(max-width:900px){#eonDeck .ed-2,#eonDeck .ed-3{grid-template-columns:1fr}#eonDeck .ed-impact{grid-template-columns:repeat(2,1fr)}#eonDeck .ed-live{grid-template-columns:1fr}#eonDeck .ed-live-l{border-right:0;border-bottom:1px solid var(--line-2,#eef1f6)}}`;
   document.head.appendChild(s);
 }
@@ -381,7 +392,8 @@ function liveSection(m, L) {
 }
 
 function askBar() {
-  return `<div class="ed-ask"><i class="bi bi-stars q"></i><input id="edAsk" placeholder="Ask Eon anything about your data — e.g. “which opportunity should I focus on this week?”"><button id="edAskBtn">Ask Eon</button></div>`;
+  return `<div class="ed-ask"><i class="bi bi-stars q"></i><input id="edAsk" placeholder="Ask Eon anything — “what should I focus on?”, “where can I save money?”, or just say hi"><button id="edAskBtn">Ask Eon</button></div>
+    <div class="ed-answer" id="edAnswer" hidden></div>`;
 }
 
 /* ---------------- render ---------------- */
@@ -425,7 +437,7 @@ const EonDeck = {
     const L = live();
     // Business section only shows cards that have real content (no empty space).
     const moneyCoach = ((m.finance && m.finance.hasData) || (m.leaks && m.leaks.hasData)) ? cardMoney(m.finance, m.leaks) : '';
-    const bizCards = [cardBoard(), cardTwin(), cardAgent(), cardCrisis(), cardProver()].filter(Boolean);
+    const bizCards = [cardBoard(), cardTwin(), cardAgent(), cardCrisis()].filter(Boolean);
     host.innerHTML = `
       <div class="ed-hero">
         <div><h1>Intelligence</h1><p>Everything Eon reads, predicts and decides across your operation — one brain, explained.</p></div>
@@ -433,6 +445,7 @@ const EonDeck = {
 
       ${liveSection(m, L)}
       ${askBar()}
+      <div class="ed-sec"><div class="ed-grid">${cardProver()}</div></div>
 
       <div class="ed-sec">
         <div class="ed-seclabel"><b>Intelligence</b></div>
@@ -468,19 +481,22 @@ const EonDeck = {
     const cb = host.querySelector('#edCrisisBody');
     if (cb && !cb._hydrated) { cb._hydrated = true; try { window.EonCrisis && window.EonCrisis.render(cb); } catch {} }
     const ask = host.querySelector('#edAsk'), askBtn = host.querySelector('#edAskBtn');
-    const doAsk = () => {
+    const doAsk = async () => {
       const q = (ask && ask.value || '').trim(); if (!q) return;
-      // a command → the action agent; a decision → the board; else → Ask EON (with the text!)
-      if (COMMAND_RE.test(q)) { try { window.EonAgent && window.EonAgent.open(q); } catch {} }
-      else if (DECISION_RE.test(q)) { try { window.EonBoardroom && window.EonBoardroom.open(q); } catch {} }
-      else {
-        try {
-          const a = window.EonAsk;
-          if (a && a.ask) { if (a._toggle) a._toggle(true); a.ask(q); }               // open panel + run the question
-          else { const chip = document.getElementById('eon-ask-chip'); if (chip) chip.click(); }
-        } catch {}
-      }
+      // a command → the action agent; a decision → the board
+      if (COMMAND_RE.test(q)) { try { window.EonAgent && window.EonAgent.open(q); } catch {} if (ask) ask.value = ''; return; }
+      if (DECISION_RE.test(q)) { try { window.EonBoardroom && window.EonBoardroom.open(q); } catch {} if (ask) ask.value = ''; return; }
+      // everything else → answer INLINE, right here on the deck
+      const ans = host.querySelector('#edAnswer'); if (!ans) return;
+      ans.hidden = false;
+      ans.innerHTML = `<div class="ed-ansq">“${esc(q)}”</div><div class="ed-ansa"><span class="ed-anstyping">Eon is thinking<i>.</i><i>.</i><i>.</i></span></div>`;
       if (ask) ask.value = '';
+      try {
+        const r = (window.EonAsk && window.EonAsk.answer) ? await window.EonAsk.answer(q) : { speak: 'Ask Eon is warming up — try again in a second.' };
+        const detail = r && r.detail ? (Array.isArray(r.detail) ? r.detail : String(r.detail).split('\n')) : [];
+        ans.querySelector('.ed-ansa').innerHTML = `<div class="sp">${esc((r && r.speak) || '')}</div>${detail.length ? `<div class="dt">${detail.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}`;
+        try { window.EON && window.EON.character && window.EON.character.playEmote && window.EON.character.playEmote('point'); } catch {}
+      } catch { const a = ans.querySelector('.ed-ansa'); if (a) a.textContent = 'I tripped on that — try rephrasing?'; }
     };
     if (askBtn) askBtn.onclick = doAsk;
     if (ask) ask.onkeydown = (e) => { if (e.key === 'Enter') doAsk(); };

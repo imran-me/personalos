@@ -25,6 +25,13 @@ const SYN = {
   reminders: ['reminder'],
 };
 const AMOUNT_HINTS = ['amount', 'value', 'price', 'cost', 'fee', 'total', 'budget', 'salary', 'paid'];
+// Honest, creative fallbacks when a message isn't in the rule-based library yet.
+const FALLBACKS = [
+  "I don't have that one in my library yet — I'm a rule-based brain that's still growing 🌱. Try “what's due?”, “which opportunity should I focus on?”, or “where can I save money?”",
+  "That's beyond what I can compute offline right now (a full language model is on my roadmap). But I'm great with your data — ask me about deadlines, win-probability, money or your network.",
+  "Hmm, I can't answer that yet — my language side is still learning. I shine on your real data though: try “overdue”, “my win rate”, or “plan my week”.",
+  "Not in my playbook yet 🙂. I get smarter as I grow — for now, ask me about your opportunities, deadlines, finances or impact.",
+];
 
 export class AskEon {
   constructor(ctx) { this.ctx = ctx; this._open = false; this.cb = new CompanionBrain(() => (typeof window !== 'undefined' ? window.EonBrain : null)); }
@@ -45,6 +52,11 @@ export class AskEon {
   // ---------------- ask flow ----------------
   async ask(q) {
     q = String(q || '').trim(); if (!q) return;
+    // planning commands → the Action Agent (checkboxes + one-click reminders),
+    // so it's available from EVERY Ask Eon, not just the dashboard deck.
+    if (/\b(plan|prepare|prep|build|organi[sz]e|set ?up|schedule|draft me)\b/i.test(q) && window.EonAgent && window.EonAgent.open) {
+      try { window.EonAgent.open(q); this._toggle && this._toggle(false); return; } catch {}
+    }
     this._echo(q);
     this._answerEl.textContent = '…thinking';
     try { this.ctx.character.playEmote('think'); } catch {}
@@ -61,15 +73,24 @@ export class AskEon {
     try { this.ctx.ai?.speak(res.speak.slice(0, 140), 5200); } catch {}
   }
 
+  /** Public: answer a question and RETURN the result (for inline UIs like the deck),
+      without touching the floating chip's DOM. */
+  async answer(q) { try { return await this._answer(String(q || '')); } catch { return { speak: this._pick(FALLBACKS) }; } }
+
   async _answer(q) {
     const B = window.EonBrain;
     await B?.ensureData?.();
     const data = B?.getData?.() || {};
     const records = B?.getRecords?.() || [];
     const keys = Object.keys(data).filter((k) => Array.isArray(data[k]));
-    if (!records.length) return { speak: "I can't see your data yet — give the brain a moment, or run a meditation." };
 
-    const nq = q.toLowerCase();
+    const nq = q.toLowerCase().trim();
+    const ex = this._extra(nq, data, records); if (ex) return ex;   // greetings/help/win/money/... (many need no data)
+    if (!records.length) return { speak: this._pick([
+      "I'm still reading your data — give the brain a moment (or run a meditation). Meanwhile, ask me “what can you do?” 🌱",
+      "My data brain is warming up. Ask me what I can do while I finish reading your records.",
+    ]) };
+
     const now = Date.now();
     const days = (iso) => Math.floor((Date.parse(iso) - now) / 86400000);
 
@@ -144,8 +165,83 @@ export class AskEon {
       }
     }
     if (ent) return this._list(recs.slice(0, 10), `${recs.length} ${ent}`);
-    return { speak: this._help(keys) };
+    // creative fallback — honest about being a growing, offline brain
+    return { speak: this._pick(FALLBACKS), detail: ['• “what’s due this week?”  • “which opportunity should I focus on?”', '• “where can I save money?”  • “how am I doing?”  • “plan my week”'] };
   }
+
+  _pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  _miniDigest() {
+    try {
+      const recs = window.EonBrain?.getRecords?.() || []; const now = Date.now();
+      const due = recs.filter((r) => r.deadlineAt && (() => { const d = (Date.parse(r.deadlineAt) - now) / 86400000; return d >= 0 && d <= 7; })()).length;
+      const data = window.EonBrain?.getData?.() || {};
+      const opps = (data.opportunities || data.opportunity || []).length;
+      if (due) return `You've got ${due} deadline${due > 1 ? 's' : ''} this week.`;
+      if (opps) return `${opps} opportunit${opps > 1 ? 'ies' : 'y'} on your radar.`;
+      return 'All quiet right now.';
+    } catch { return ''; }
+  }
+
+  /* Rich, grounded, varied intents — most work even before the full data loads.
+     Pulls live from the portable intelligence modules (win / finance / impact /
+     graph) so answers are real-time and match the user's field. Returns null if
+     nothing matches (the data intents + creative fallback then take over). */
+  _extra(nq, data, records) {
+    const pick = (a) => this._pick(a);
+    const nm = (() => { try { return (document.getElementById('pfName')?.textContent || '').trim().split(/\s+/)[0] || ''; } catch { return ''; } })();
+    const hi = nm ? `, ${nm}` : '';
+    const strip = (s) => String(s).replace(/<[^>]+>/g, '');
+
+    if (/^(hi+|hey+|hello+|yo+|hola|salam|assalam|assalamualaikum|good\s*(morning|afternoon|evening)|morning|evening|sup|howdy|namaste|greetings)\b/.test(nq) || /^what'?s\s*up\b/.test(nq))
+      return { speak: pick([`Hey${hi}! ${this._miniDigest()} What do you want to tackle?`, `Hi${hi} 👋 ${this._miniDigest()} Ask me about your deadlines, opportunities, money or focus.`, `Hello${hi}! ${this._miniDigest()} I'm all ears.`, `Yo${hi} — ${this._miniDigest()} Where do we start?`]) };
+
+    if (/how are (you|u)\b|how'?s it going|you (ok|good|alright)|how do you feel/.test(nq))
+      return { speak: pick([`Running smooth and watching your data 🌿 ${this._miniDigest()}`, `Sharp — just re-read everything. ${this._miniDigest()}`, `Good! Quietly crunching your numbers. ${this._miniDigest()}`]) };
+
+    if (/what can you do|help me\b|how do you work|what do you do|your (features|abilities|skills)|commands|who are you|what are you|how can you help/.test(nq))
+      return { speak: pick(["I'm Eon — your data co-worker. A few things I can do:", "Plenty! I read your whole operation. For example:", "I'm your AI co-worker. Try any of these:"]), detail: ['• “what’s due this week?” · “overdue” · “next deadline”', '• “which opportunity should I focus on?” (win-probability)', '• “where can I save money?” (finance coach)', '• “how am I doing?” · “my win rate”', '• “who should I ask for a reference?”', '• “plan my Chevening application” (I create reminders)', '• “what’s my impact so far?”'] };
+
+    if (/\bwin\b|chanc|\bodds\b|likel|worth (my|the) time|which.*(focus|apply|prioriti|pick|choose|first)|best bet|most likely|should i apply|what.*focus/.test(nq)) {
+      try { window.EonWinPredictor?.refresh(); const w = window.EonWinPredictor?.summary(); if (w && w.ok && w.top && w.top.length) { const t = w.top[0]; return { speak: pick([`Focus on “${t.name}” — I put it at ${Math.round(t.p * 100)}%.`, `Highest odds: “${t.name}” (${Math.round(t.p * 100)}%). Spend today there.`, `“${t.name}” is your best bet at ${Math.round(t.p * 100)}%.`]), detail: w.top.slice(0, 4).map((x) => `• ${x.name} — ${Math.round(x.p * 100)}% win`) }; } } catch {}
+      return { speak: "Log a few opportunity outcomes and I'll predict which are worth your time." };
+    }
+
+    if (/money|financ|spend|budget|\bleak|afford|\bcash\b|expens|save|saving|cut cost|overspend|where.*money|how much.*(spend|save)/.test(nq)) {
+      try { const f = window.EonFinance?.analyze(); if (f && f.hasData) return { speak: strip(f.headline), detail: f.tips.slice(0, 3).map((t) => '• ' + strip(t.text)) }; } catch {}
+      return { speak: "Add income & expenses in Accounts and I'll forecast your spend and find real savings." };
+    }
+
+    if (/how am i doing|my (stats|record|performance|progress)|win rate|success rate|how many.*won|track record|am i on track|my numbers/.test(nq)) {
+      try {
+        const opps = (data.opportunities || []);
+        const WON = /won|accept|complete|approv|award|admit|success/i, LOST = /lost|reject|declin|withdraw|miss|irrelevant/i;
+        const decided = opps.filter((o) => WON.test(o.status || '') || LOST.test(o.status || ''));
+        const wins = decided.filter((o) => WON.test(o.status || ''));
+        if (decided.length) return { speak: pick([`You're at a ${Math.round(wins.length / decided.length * 100)}% win rate — ${wins.length} of ${decided.length} decided.`, `Track record: ${wins.length}/${decided.length} won (${Math.round(wins.length / decided.length * 100)}%). ${this._miniDigest()}`]) };
+      } catch {}
+      return { speak: `Here's where things stand — ${this._miniDigest()}` };
+    }
+
+    if (/impact|what have you done|how.*helped|your value|\broi\b|contribution/.test(nq)) {
+      try { const m = window.EonImpact?.get(); if (m) return { speak: `So far: ${m.guarded} deadlines guarded · ${m.surfaced} opportunities surfaced · ${m.hours} hrs saved${m.money ? ` · ${this._fmt(m.money)} in leaks flagged` : ''}.` }; } catch {}
+    }
+
+    if (/who (should|can|do) i (ask|contact)|referee|recommend|reference for|best (person|contact)|network|reach out/.test(nq)) {
+      try { const g = window.EonGraph?.compute(); if (g && g.ok && g.recs && g.recs.length) { const r = g.recs[0]; const d = g.recs.slice(0, 3).map((x) => `• ${x.contact} — for ${x.opp}`); const neg = (g.neglected || [])[0]; return { speak: pick([`For your top opportunity, ${r.contact} is your strongest referee.`, `Ask ${r.contact} — best fit for “${r.opp}”.`]) + (neg ? ` (You've gone quiet with ${neg.name} — ${neg.days}d.)` : ''), detail: d }; } } catch {}
+    }
+
+    if (/motivat|encourag|stress|tired|overwhelm|give up|can'?t do|too hard|struggl|anxious|burn.?out|demotivat|feeling low|exhaust/.test(nq))
+      return { speak: pick([`One step at a time${hi}. Pick the smallest next thing and just start — momentum does the rest. 💪`, `You've got this${hi}. Look how much you're already on top of. Do one small thing now.`, `Deep breath${hi}. I'll hold the deadlines; you take the next single move. 🌿`, `Progress beats perfection${hi}. Ship the 10-minute version and build from there.`]) };
+
+    if (/\b(thank|thx|thanks|cheers|appreciate|great job|nice one|awesome|good (job|bot|work)|love (it|you)|well done|helpful)\b/.test(nq))
+      return { speak: pick(['Anytime 🙌', "Happy to help — that's the job.", 'You got it. 💙', 'My pleasure — keep the questions coming.', '🙌 Always here.']) };
+
+    if (/summit|competition|data science summit|\bdss\b|\bpitch\b|judge|showcase|contest|present\b/.test(nq))
+      return { speak: pick(['The Summit is your stage — lead with the live demo: hand a judge any spreadsheet and let me read it. 🎤', 'For the summit: show win-probability, the money coach and the board meeting — real data science on live data.', 'Pitch tip: open with the pain, then prove me on a judge’s own file. Mic drop.']) };
+
+    return null;
+  }
+
 
   _remind(q) {
     let task = q.replace(/.*?(remind me( to| about)?|don'?t let me forget( to)?|set (a )?reminder( to| about)?)\s*/i, '').trim();

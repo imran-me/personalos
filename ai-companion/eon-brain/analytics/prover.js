@@ -358,7 +358,27 @@ async function readExcel(file) {
   const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
   const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(ws, { defval: '', raw: false });
+  // Read as rows-of-arrays and FIND the real header row (spreadsheets often have a
+  // title / blank rows above the table — that's what made every column "__EMPTY").
+  const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: false, raw: false });
+  if (!aoa.length) return [];
+  let hIdx = 0, best = -1;
+  for (let i = 0; i < Math.min(aoa.length, 20); i++) {
+    const row = aoa[i] || [];
+    const nonEmpty = row.filter((c) => String(c).trim() !== '').length;
+    const texty = row.filter((c) => { const s = String(c).trim(); return s !== '' && isNaN(s.replace(/[,\s]/g, '')); }).length;
+    const score = nonEmpty + texty * 1.5;                 // a header row is mostly non-numeric labels
+    if (nonEmpty >= 2 && score > best) { best = score; hIdx = i; }
+  }
+  const headers = (aoa[hIdx] || []).map((h, i) => String(h).trim() || `column_${i + 1}`);
+  const rows = [];
+  for (let r = hIdx + 1; r < aoa.length; r++) {
+    const row = aoa[r] || [];
+    if (!row.some((c) => String(c).trim() !== '')) continue;
+    const o = {}; headers.forEach((h, i) => { o[h] = row[i] == null ? '' : row[i]; });
+    rows.push(o);
+  }
+  return rows;
 }
 async function readPdf(file) {
   const pdfjs = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs');
