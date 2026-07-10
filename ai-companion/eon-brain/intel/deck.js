@@ -20,6 +20,7 @@ import { profileDataset } from '../analytics/prover.js';
 import '../models/win-predictor.js';
 import '../analytics/anomaly.js';
 import '../analytics/impact.js';
+import '../intel/boardroom.js';   // registers window.EonBoardroom (feature a)
 
 const A = '#4f46e5';        // indigo accent (used sparingly)
 const G = '#0f9d58', AM = '#c77d0a', R = '#d6453d', SL = '#64748b';
@@ -232,6 +233,10 @@ function cardSources(entities, records) {
 function cardProver() {
   return card('Any-dataset prover', 'discovery + auto-EDA on any file', `<p class="ed-empty">Hand Eon any spreadsheet and he infers the schema and profiles it live — any business, any data, zero integration.</p><button class="ed-cardbtn" id="edProve"><i class="bi bi-upload me-1"></i>Prove a dataset</button>`);
 }
+function cardBoard() {
+  return card('Board meeting', 'four advisors argue your call, grounded in your data', `<p class="ed-empty">Put any decision to Eon's boardroom — <b>CFO</b>, <b>Skeptic</b>, <b>Growth</b> and <b>Compliance</b> debate it live and converge on a verdict, with the dissenting view kept visible.</p><button class="ed-cardbtn" id="edBoard"><i class="bi bi-chat-square-quote me-1"></i>Convene the board</button>`);
+}
+const DECISION_RE = /\b(should i|shall i|do i|is it worth|worth it|better to|hire|fire|buy|invest|expand|launch|borrow|quit|pivot|raise|discount|scale)\b|\?\s*$/i;
 
 function card(title, sub, body) { return `<div class="ed-card"><div class="ed-ct">${title}</div><div class="ed-cs">${sub}</div>${body}</div>`; }
 
@@ -272,7 +277,7 @@ const EonDeck = {
     let m; try { m = compute(); } catch { host.innerHTML = `<div class="ed-card">Warming up…</div>`; return; }
     const L = live();
     // Business section only shows cards that have real content (no empty space).
-    const bizCards = [(m.leaks && m.leaks.hasData) ? cardMoney(m.leaks) : '', cardProver()].filter(Boolean);
+    const bizCards = [(m.leaks && m.leaks.hasData) ? cardMoney(m.leaks) : '', cardBoard(), cardProver()].filter(Boolean);
     host.innerHTML = `
       <div class="ed-hero">
         <div><h1>Intelligence</h1><p>Everything Eon reads, predicts and decides across your operation — one brain, explained.</p></div>
@@ -288,7 +293,7 @@ const EonDeck = {
 
       <div class="ed-sec">
         <div class="ed-seclabel"><b>Business</b></div>
-        <div class="ed-grid ${bizCards.length > 1 ? 'ed-2' : ''}">${bizCards.join('')}</div>
+        <div class="ed-grid ${bizCards.length >= 3 ? 'ed-3' : bizCards.length === 2 ? 'ed-2' : ''}">${bizCards.join('')}</div>
       </div>
 
       <div class="ed-sec">
@@ -298,8 +303,16 @@ const EonDeck = {
       </div>`;
 
     host.querySelectorAll('#edProve, .ed-provetrigger').forEach((pv) => { pv.onclick = () => { try { window.EonProver && window.EonProver.openOverlay({ onReact: () => setTimeout(() => this.render(), 400) }); } catch {} }; });
+    const bd = host.querySelector('#edBoard');
+    if (bd) bd.onclick = () => { try { window.EonBoardroom && window.EonBoardroom.open(); } catch {} };
     const ask = host.querySelector('#edAsk'), askBtn = host.querySelector('#edAskBtn');
-    const doAsk = () => { const q = (ask && ask.value || '').trim(); try { const chip = document.getElementById('eon-ask-chip'); if (chip) chip.click(); } catch {} if (ask) ask.value = ''; };
+    const doAsk = () => {
+      const q = (ask && ask.value || '').trim(); if (!q) return;
+      // a decision → convene the board; a question → the existing Ask EON engine
+      if (DECISION_RE.test(q)) { try { window.EonBoardroom && window.EonBoardroom.open(q); } catch {} }
+      else { try { const chip = document.getElementById('eon-ask-chip'); if (chip) chip.click(); } catch {} }
+      if (ask) ask.value = '';
+    };
     if (askBtn) askBtn.onclick = doAsk;
     if (ask) ask.onkeydown = (e) => { if (e.key === 'Enter') doAsk(); };
   },
