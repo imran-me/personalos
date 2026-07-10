@@ -190,4 +190,5 @@ const EonWinPredictor = {
 };
 
 if (typeof window !== 'undefined') window.EonWinPredictor = Object.assign(window.EonWinPredictor || {}, EonWinPredictor);
+import './win-surfacer.js';   // surfaces P(win) pills + detail banner site-wide (guarded, owner-only)
 export default EonWinPredictor;
