@@ -35,8 +35,11 @@ const sigmoid = (z) => 1 / (1 + Math.exp(-z));
 const lc = (v) => String(v == null ? '' : v).toLowerCase();
 const num = (v) => { const n = parseFloat(String(v).replace(/[,৳$€£\s%]/g, '')); return isNaN(n) ? null : n; };
 
-const FEATURES = ['progress', 'deadline', 'priority', 'categoryWinRate', 'effort', 'momentum'];
-const FLABEL = { progress: 'stage progress', deadline: 'deadline runway', priority: 'priority', categoryWinRate: 'track record in its category', effort: 'effort logged', momentum: 'recent momentum' };
+const FEATURES = ['progress', 'deadline', 'priority', 'categoryWinRate', 'effort', 'momentum', 'docReadiness', 'competitiveness'];
+const FLABEL = { progress: 'stage progress', deadline: 'deadline runway', priority: 'priority', categoryWinRate: 'track record in its category', effort: 'effort logged', momentum: 'recent momentum', docReadiness: 'document readiness', competitiveness: 'how winnable it is' };
+// optional per-record factors (present only if the host captures them; safe defaults otherwise)
+const DOCR = { 'not started': 0.1, 'in progress': 0.45, 'mostly ready': 0.75, ready: 1.0 };
+const COMP = { low: 0.85, medium: 0.55, high: 0.3, 'very high': 0.15 };   // favorability: higher = easier to win
 
 function brain() { try { return window.EonBrain || null; } catch { return null; } }
 function ownerOK() { const b = brain(); try { return !!(b && b.isOwner && b.isOwner()); } catch { return false; } }
@@ -138,14 +141,16 @@ const EonWinPredictor = {
       const effRaw = effortField ? (effortIsArr ? (Array.isArray(r[effortField]) ? r[effortField].length : 0) : (num(r[effortField]) || 0)) : 0;
       const effort = clamp01(effRaw / maxEffort);
       const momentum = this._momentum(r, desc);
-      return [progress, deadline, priority, categoryWinRate, effort, momentum];
+      const docReadiness = DOCR[lc(r.docReadiness)] ?? clamp01(effort);        // fallback: effort as a readiness proxy
+      const competitiveness = COMP[lc(r.competitiveness)] ?? 0.5;              // neutral if not captured
+      return [progress, deadline, priority, categoryWinRate, effort, momentum, docReadiness, competitiveness];
     };
     ctx.feat = feat;
 
     // train
     const labeled = decided.map((r) => ({ x: feat(r), y: WIN_RE.test(lc(r[statusField])) ? 1 : 0 }));
     const model = { w: new Array(FEATURES.length).fill(0), b: 0, trained: false, n: labeled.length };
-    if (labeled.length < 8) { model.w = [1.1, 0.6, 0.7, 1.4, 0.8, 1.0]; model.b = -1.1; }
+    if (labeled.length < 8) { model.w = [1.1, 0.6, 0.7, 1.4, 0.8, 1.0, 0.9, 0.8]; model.b = -1.35; }
     else {
       const lr = 0.3, epochs = 500, lambda = 0.002;
       for (let e = 0; e < epochs; e++) {

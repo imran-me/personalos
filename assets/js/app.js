@@ -1023,6 +1023,8 @@ const SCHEMAS = {
       { key: 'fundingType', label: 'Funding', type: 'select', opts: 'fundingTypes' },
       { key: 'priority', label: 'Priority', type: 'select', opts: 'priorities' },
       { key: 'status', label: 'Status', type: 'select', opts: 'statuses' },
+      { key: 'competitiveness', label: 'Competitiveness', type: 'select', opts: ['Low', 'Medium', 'High', 'Very high'], hint: 'How hard it is to win — sharpens EON’s win-probability' },
+      { key: 'docReadiness', label: 'Document readiness', type: 'select', opts: ['Not started', 'In progress', 'Mostly ready', 'Ready'], hint: 'How ready your application documents are — feeds win-probability' },
       { key: 'link', label: 'Official link', type: 'url' },
       { key: 'openDate', label: 'Open date', type: 'date' },
       { key: 'deadline', label: 'Deadline', type: 'date' },

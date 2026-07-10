@@ -580,6 +580,17 @@ export class Backpack {
   _toolWorkstation() {
     this._togglePanel(false);
     try {
+      // On a site that ships the dedicated Eon Intelligence page, take the owner
+      // straight there (the full deck). Elsewhere (e.g. the ERP) fall back to the
+      // portable overlay workstation — so this tool works everywhere.
+      const page = (typeof document !== 'undefined') && document.querySelector('a[href$="eon.html"]');
+      const onEon = (typeof document !== 'undefined') && /(^|\/)eon\.html(\?|#|$)/.test(location.pathname + location.search);
+      if (page && !onEon) {
+        try { this.ctx.character.playEmote('point'); } catch {} this._sparkle('🧠');
+        try { this.ctx.ai?.speak('Opening my full intelligence deck. 🧠', 2600); } catch {}
+        setTimeout(() => { try { location.href = 'eon.html'; } catch {} }, 260);
+        return;
+      }
       const W = EonWorkstation || (typeof window !== 'undefined' && window.EonWorkstation);
       if (W && W.open) { W.open(); try { this.ctx.character.playEmote('point'); } catch {} this._sparkle('🧠'); try { this.ctx.ai?.speak('Here\'s everything I know — live. 🧠', 3200); } catch {} }
       else this._react('🧠', 'The workstation is warming up. 🧠', 'think');
