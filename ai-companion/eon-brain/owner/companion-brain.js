@@ -54,7 +54,13 @@ export class CompanionBrain {
     const c = consequenceOf(f.entity, f.label);
     const esc = this._escalation(f);      // grows the longer something is overdue
     const w = this._weight(f.entity);     // learned: down-rank what you keep dismissing
-    return { ...f, consequence: c, score: u * c * esc * w, line: this._line(f) };
+    let score = u * c * esc * w;
+    // Expected-value weighting: fold in the win-probability model when the item is a
+    // scored pipeline record (idea #2/#8) — surfaces the high-EV moves, not just the
+    // loudest. Guarded + additive: non-pipeline items are unaffected.
+    let pWin = null;
+    try { const pred = window.EonWinPredictor && window.EonWinPredictor.get(f.recordId || f.id); if (pred && pred.p != null) { pWin = pred.p; score *= (0.6 + 0.8 * pWin); } } catch {}
+    return { ...f, consequence: c, pWin, score, line: this._line(f) };
   }
   _escalation(f) {
     const iso = f.dueAt || f.deadlineAt;
