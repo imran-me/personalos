@@ -13,6 +13,7 @@
    ============================================================ */
 
 import { CompanionBrain } from './companion-brain.js';
+import '../knowledge/academic.js';   // Eon's academic knowledge base (window.EonAcademic)
 
 const SYN = {
   opportunities: ['opportunit', 'opps', 'opp'],
@@ -238,6 +239,10 @@ export class AskEon {
 
     if (/summit|competition|data science summit|\bdss\b|\bpitch\b|judge|showcase|contest|present\b/.test(nq))
       return { speak: pick(['The Summit is your stage — lead with the live demo: hand a judge any spreadsheet and let me read it. 🎤', 'For the summit: show win-probability, the money coach and the board meeting — real data science on live data.', 'Pitch tip: open with the pain, then prove me on a judge’s own file. Mic drop.']) };
+
+    // academic knowledge base — general questions about SOPs, scholarships, tests,
+    // extracurriculars, study/career, even when they're not about the user's own data.
+    try { const ak = window.EonAcademic && window.EonAcademic.answerAcademic(nq); if (ak) return { speak: ak.speak, detail: ak.detail }; } catch {}
 
     return null;
   }

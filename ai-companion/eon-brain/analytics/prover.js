@@ -25,6 +25,7 @@
    ============================================================ */
 
 import { discover } from '../discovery.js';
+import '../knowledge/academic.js';   // Eon's academic knowledge base (window.EonAcademic)
 
 /* ---------------- CSV / TSV parsing ---------------- */
 /** Robust delimited-text parser: quotes, escaped quotes, embedded
@@ -439,7 +440,11 @@ export function analyzeDocument(text, name) {
   const keySentences = [...new Set([sentences[0], ...scored.sort((a, b) => b.sc - a.sc).map((x) => x.s)])].filter(Boolean).slice(0, 3);
   let finance = null;
   if (isFinancial) { const nums = moneyMatches.map((m) => parseFloat(String(m).replace(/[^0-9.]/g, ''))).filter((n) => !isNaN(n)); if (nums.length) finance = { count: nums.length, total: nums.reduce((a, b) => a + b, 0), max: Math.max(...nums) }; }
-  return { kind, label, wc, readMin, keywords, keySentences, finance, sentences: sentences.length };
+  // relate it to Eon's academic knowledge (SOP / recommendation / research / CV …)
+  let academic = null;
+  try { academic = window.EonAcademic && window.EonAcademic.classifyDoc(text); } catch {}
+  if (academic && !isFinancial && academic.label) { label = academic.label; if (academic.type) kind = academic.type; }
+  return { kind, label, wc, readMin, keywords, keySentences, finance, sentences: sentences.length, academic };
 }
 function fmtMoney(n) { try { return typeof window.fmtBDT === 'function' ? window.fmtBDT(Math.round(n)) : '৳' + Math.round(n).toLocaleString(); } catch { return '৳' + Math.round(n); } }
 function renderDocument(doc) {
@@ -456,6 +461,7 @@ function renderDocument(doc) {
     ${doc.finance ? `<div class="epv-sec">Money in this document</div><div class="epv-ins"><div><i class="bi bi-dot dot"></i><span>${doc.finance.count} amounts, totaling <b>~${fmtMoney(doc.finance.total)}</b> (largest ${fmtMoney(doc.finance.max)}).</span></div></div>` : ''}
     <div class="epv-sec">What it's about</div>
     <div class="epv-ins">${doc.keySentences.length ? doc.keySentences.map((s) => `<div><i class="bi bi-dot dot"></i><span>${escapeHtmlLocal(s.slice(0, 240))}${s.length > 240 ? '…' : ''}</span></div>`).join('') : '<div>Too short to summarise.</div>'}</div>
+    ${doc.academic && (doc.academic.tip || doc.academic.topics.length || doc.academic.entities.length) ? `<div class="epv-sec">Eon knows this kind of document</div><div class="epv-ins">${doc.academic.tip ? `<div><i class="bi bi-dot dot"></i><span>${escapeHtmlLocal(doc.academic.tip)}</span></div>` : ''}${(doc.academic.topics.length || doc.academic.entities.length) ? `<div><i class="bi bi-dot dot"></i><span>Related to: ${[...doc.academic.topics, ...doc.academic.entities].slice(0, 5).map(escapeHtmlLocal).join(', ')}.</span></div>` : ''}</div>` : ''}
     ${doc.keywords.length ? `<div class="epv-sec">Key terms</div><div class="epv-cols">${doc.keywords.map((k) => `<span class="epv-col"><b>${escapeHtmlLocal(k)}</b></span>`).join('')}</div>` : ''}`;
 }
 
